@@ -72,7 +72,7 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
         <div style="color:#6e6660;font-size:13px;margin-bottom:16px">${subBits.join(' · ')}</div>
         <div style="margin-bottom:16px;font-size:15px;font-weight:500">${formatCasualtyLine(incident.casualties.killed, incident.casualties.injured)}</div>
         ${demoLine.length > 0 ? `<div style="margin-bottom:16px;font-size:13px;color:#6e6660">Including ${demoLine.join(', ')}</div>` : ''}
-        <div style="margin-bottom:16px;line-height:1.5">${escapeHtml(incident.description)}</div>
+        <div style="margin-bottom:16px;line-height:1.5">${incident.description.map((p) => `<p style="margin:0 0 8px 0">${escapeHtml(p)}</p>`).join('')}</div>
         <div style="text-transform:uppercase;letter-spacing:0.05em;font-size:11px;color:#6e6660;margin-bottom:6px">Sources</div>
         <ul style="margin:0;padding-left:18px;font-size:13px">${sourcesHtml}</ul>
       `;

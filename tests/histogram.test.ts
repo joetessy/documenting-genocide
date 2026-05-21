@@ -9,7 +9,7 @@ function makeIncident(date: string, id: string): Incident {
     location: { lat: 31.5, lon: 34.4 },
     category: 'airstrike',
     casualties: { killed: 1, injured: null, killed_children: null, killed_women: null },
-    description: '',
+    description: [],
     sources: [{ org: 'airwars', id, url: 'x' }],
   };
 }
