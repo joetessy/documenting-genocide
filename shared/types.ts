@@ -17,7 +17,7 @@ export type IncidentCategory =
   | 'detention'
   | 'other';
 
-export type SourceOrg = 'airwars' | 'acled' | 'ocha';
+export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp';
 
 export type CredibilityRating = 'fair' | 'weak' | 'contested' | 'confirmed';
 
@@ -26,6 +26,16 @@ export interface SourceAttribution {
   id: string;
   url: string;
   rating?: CredibilityRating;
+}
+
+export type DamageStatus = 'destroyed' | 'severe' | 'moderate' | 'possibly_damaged';
+
+export interface DamageRecord {
+  id: string;
+  location: { lat: number; lon: number };
+  status: DamageStatus;
+  assessment_date: string;      // ISO YYYY-MM-DD
+  source: { org: 'ocha'; url: string };
 }
 
 export interface Casualties {
@@ -57,4 +67,5 @@ export interface BuildMeta {
   source_counts: Partial<Record<SourceOrg, number>>;
   dedup_merges: number;
   unplotted_count: number;     // records discarded for missing coordinates
+  damage_count?: number;
 }
