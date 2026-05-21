@@ -185,7 +185,7 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
       killed_children: pickCasualtyMax(raw.acf?.killed_injured_children, 'killed_max'),
       killed_women: pickCasualtyMax(raw.acf?.killed_injured_women, 'killed_max'),
     },
-    description: decodeHtmlEntities(raw.title?.rendered ?? ''),
+    description: [decodeHtmlEntities(raw.title?.rendered ?? '')].filter((s) => s.length > 0),
     sources: [source],
   };
 }

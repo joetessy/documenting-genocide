@@ -48,7 +48,7 @@ export interface Incident {
   location: IncidentLocation;
   category: IncidentCategory;
   casualties: Casualties;
-  description: string;
+  description: string[];  // Array of paragraphs. Phase 1 sources may produce a single-element array.
   sources: SourceAttribution[];
 }
 

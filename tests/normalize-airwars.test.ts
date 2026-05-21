@@ -161,6 +161,7 @@ describe('normalizeAirwarsRecord', () => {
     expect(result!.sources[0].id).toBe('ISPT0097');
     expect(result!.sources[0].rating).toBe('fair');
     expect(result!.sources[0].url).toBe('https://airwars.org/civilian-casualties/ispt0097-october-10-2023/');
+    expect(result!.description).toEqual(['ISPT0097 – October 10, 2023']);
   });
 
   it('trims whitespace in unique_reference_code for sources[0].id', () => {
@@ -178,7 +179,7 @@ describe('normalizeAirwarsRecord', () => {
       title: { rendered: 'ISPT0097 &#8211; October 10, 2023' },
     };
     const r = normalizeAirwarsRecord(entity, TAXONOMIES)!;
-    expect(r.description).toBe('ISPT0097 – October 10, 2023');
+    expect(r.description).toEqual(['ISPT0097 – October 10, 2023']);
   });
 
   it('returns null when coordinates are missing (record is unplotted)', () => {
