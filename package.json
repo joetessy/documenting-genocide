@@ -1,0 +1,30 @@
+{
+  "name": "gaza-exhibit",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "An interactive exhibit documenting the war on Gaza.",
+  "scripts": {
+    "dev": "vite",
+    "build": "pnpm run build-data && vite build && tsc --noEmit",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build-data": "tsx scripts/build-data.ts"
+  },
+  "dependencies": {
+    "maplibre-gl": "^4.7.0",
+    "pmtiles": "^3.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0",
+    "zod": "^3.23.0"
+  }
+}
