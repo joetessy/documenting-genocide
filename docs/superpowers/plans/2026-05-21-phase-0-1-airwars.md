@@ -48,7 +48,10 @@ gaza-exhibit/
 ├── shared/
 │   └── types.ts                        NEW  — Incident, Source, DamageRecord, Meta (shared client+scripts)
 │
-├── data/raw/airwars/                   (gitignored, auto-created)
+├── data/raw/airwars/                   NEW (committed — frozen snapshot of source API responses)
+│   ├── page-001.json                   NEW (minified)
+│   ├── ... (~28 pages)
+│   └── taxonomies.json                 NEW
 │
 ├── public/data/
 │   ├── incidents.json                  NEW (generated, committed)
@@ -639,11 +642,12 @@ export async function fetchAirwars(opts: { refresh?: boolean } = {}): Promise<vo
     strike_type: await fetchTaxonomy('strike_type'),
     casualty: await fetchTaxonomy('casualty'),
   };
-  await writeFile(join(OUT_DIR, 'taxonomies.json'), JSON.stringify(taxonomies, null, 2));
+  // Minified — files are committed to the repo, keep size down.
+  await writeFile(join(OUT_DIR, 'taxonomies.json'), JSON.stringify(taxonomies));
 
   // First page tells us total pages.
   const first = await fetchPage(1);
-  await writeFile(join(OUT_DIR, 'page-001.json'), JSON.stringify(first.records, null, 2));
+  await writeFile(join(OUT_DIR, 'page-001.json'), JSON.stringify(first.records));
   console.log(`Fetched page 1/${first.totalPages} (${first.records.length} records)`);
 
   for (let p = 2; p <= first.totalPages; p++) {
@@ -654,7 +658,7 @@ export async function fetchAirwars(opts: { refresh?: boolean } = {}): Promise<vo
     }
     await sleep(500);  // ~2 req/s throttle, polite to Cloudflare
     const { records } = await fetchPage(p);
-    await writeFile(path, JSON.stringify(records, null, 2));
+    await writeFile(path, JSON.stringify(records));
     console.log(`Fetched page ${p}/${first.totalPages} (${records.length} records)`);
   }
   console.log('Airwars fetch complete.');
@@ -702,14 +706,19 @@ pnpm typecheck
 
 Expected: exits 0.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit (including the raw data snapshot)**
 
 ```bash
-git add scripts/fetch-airwars.ts
-git commit -m "feat: fetch Airwars Gaza incidents via WP REST API"
+git add scripts/fetch-airwars.ts data/raw/airwars/
+git commit -m "feat: fetch Airwars Gaza incidents and commit raw snapshot"
 ```
 
-Note: `data/raw/` is gitignored — raw cache is **not** committed.
+Note: **`data/raw/airwars/` IS committed**. This freezes a snapshot of the upstream API responses so that:
+- Every developer (and CI) starts with the data — no extra requests to Airwars.
+- Normalize/dedup changes in Phase 2+ can be re-run against the same data without re-fetching.
+- The repo is auditable: anyone can verify our normalization is faithful to the original responses.
+
+To refresh later (when Airwars publishes new incidents), run `pnpm tsx scripts/fetch-airwars.ts --refresh` and commit the new pages.
 
 ---
 
