@@ -1,16 +1,31 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeAirwarsRecord, parseAirwarsDate, pickPrimaryCoord } from '../scripts/normalize-airwars';
+import {
+  normalizeAirwarsRecord,
+  parseAirwarsDate,
+  pickPrimaryCoord,
+  decodeHtmlEntities,
+} from '../scripts/normalize-airwars';
 
 const TAXONOMIES = {
   civilian_harm_status: {
+    '836': { name: 'Confirmed', slug: 'confirmed' },
     '837': { name: 'Fair', slug: 'fair' },
     '838': { name: 'Weak', slug: 'weak' },
     '839': { name: 'Contested', slug: 'contested' },
-    '840': { name: 'Confirmed', slug: 'confirmed' },
+    '840': { name: 'Discounted', slug: 'discounted' },
+    '1057': { name: 'Unknown', slug: 'unknown' },
   },
   strike_type: {
-    '432': { name: 'Airstrike and/or Artillery', slug: 'airstrike-artillery' },
-    '433': { name: 'Ground operation', slug: 'ground-operation' },
+    '431': { name: 'Airstrike', slug: 'airstrike' },
+    '432': { name: 'Airstrike and/or Artillery', slug: 'airstrike-and-or-artillery' },
+    '433': { name: 'Artillery', slug: 'artillery' },
+    '434': { name: 'Drone Strike', slug: 'drone-strike' },
+    '439': { name: 'Counter-Terrorism Action (Ground)', slug: 'counter-terrorism-action-ground' },
+    '643': { name: 'Naval bombardment', slug: 'naval-bombardment' },
+    '752': { name: 'Ground operation', slug: 'ground-operation' },
+    '1025': { name: 'Unknown', slug: 'unknown' },
+    '1351': { name: 'Mine', slug: 'mine' },
+    '1352': { name: 'Sea Drone', slug: 'sea-drone' },
   },
   casualty: {},
 };
@@ -78,13 +93,45 @@ describe('pickPrimaryCoord', () => {
   it('returns null for empty array', () => {
     expect(pickPrimaryCoord([])).toBeNull();
   });
+
+  it('returns null for out-of-range latitude', () => {
+    expect(pickPrimaryCoord([{ latitude: 91, longitude: 0 }])).toBeNull();
+    expect(pickPrimaryCoord([{ latitude: -91, longitude: 0 }])).toBeNull();
+  });
+
+  it('returns null for out-of-range longitude', () => {
+    expect(pickPrimaryCoord([{ latitude: 31, longitude: 181 }])).toBeNull();
+    expect(pickPrimaryCoord([{ latitude: 31, longitude: -181 }])).toBeNull();
+  });
+});
+
+describe('decodeHtmlEntities', () => {
+  it('decodes named entities', () => {
+    expect(decodeHtmlEntities('AT&amp;T')).toBe('AT&T');
+    expect(decodeHtmlEntities('1 &lt; 2 &gt; 0')).toBe('1 < 2 > 0');
+    expect(decodeHtmlEntities('&quot;hi&quot;')).toBe('"hi"');
+    expect(decodeHtmlEntities('it&apos;s')).toBe("it's");
+  });
+
+  it('decodes numeric decimal entities', () => {
+    expect(decodeHtmlEntities('a &#8211; b')).toBe('a – b');
+    expect(decodeHtmlEntities('&#39;')).toBe("'");
+  });
+
+  it('decodes numeric hex entities', () => {
+    expect(decodeHtmlEntities('a &#x2013; b')).toBe('a – b');
+  });
+
+  it('leaves unknown named entities alone', () => {
+    expect(decodeHtmlEntities('&bogusentity;')).toBe('&bogusentity;');
+  });
 });
 
 describe('normalizeAirwarsRecord', () => {
   it('produces a complete Incident from a well-formed record', () => {
     const result = normalizeAirwarsRecord(SAMPLE_RECORD, TAXONOMIES);
     expect(result).not.toBeNull();
-    expect(result!.id).toBe('airwars:ISPT0097');
+    expect(result!.id).toBe('airwars:93656');
     expect(result!.date).toBe('2023-10-10');
     expect(result!.location.lat).toBeCloseTo(31.344261);
     expect(result!.location.lon).toBeCloseTo(34.291017);
@@ -100,9 +147,38 @@ describe('normalizeAirwarsRecord', () => {
     expect(result!.sources[0].url).toBe('https://airwars.org/civilian-casualties/ispt0097-october-10-2023/');
   });
 
+  it('trims whitespace in unique_reference_code for sources[0].id', () => {
+    const padded = {
+      ...SAMPLE_RECORD,
+      acf: { ...SAMPLE_RECORD.acf, unique_reference_code: '  ISPT0097 ' },
+    };
+    const r = normalizeAirwarsRecord(padded, TAXONOMIES)!;
+    expect(r.sources[0].id).toBe('ISPT0097');
+  });
+
+  it('decodes HTML entities in title.rendered into the description', () => {
+    const entity = {
+      ...SAMPLE_RECORD,
+      title: { rendered: 'ISPT0097 &#8211; October 10, 2023' },
+    };
+    const r = normalizeAirwarsRecord(entity, TAXONOMIES)!;
+    expect(r.description).toBe('ISPT0097 – October 10, 2023');
+  });
+
   it('returns null when coordinates are missing (record is unplotted)', () => {
     const noGeo = { ...SAMPLE_RECORD, acf: { ...SAMPLE_RECORD.acf, geolocations: [] } };
     expect(normalizeAirwarsRecord(noGeo, TAXONOMIES)).toBeNull();
+  });
+
+  it('returns null when coordinates are out of world range', () => {
+    const badCoord = {
+      ...SAMPLE_RECORD,
+      acf: {
+        ...SAMPLE_RECORD.acf,
+        geolocations: [{ latitude: 91, longitude: 0, primary_coordinate: true }],
+      },
+    };
+    expect(normalizeAirwarsRecord(badCoord, TAXONOMIES)).toBeNull();
   });
 
   it('returns null when date is malformed', () => {
@@ -123,15 +199,29 @@ describe('normalizeAirwarsRecord', () => {
     expect(r.casualties.injured).toBe(8);
   });
 
-  it('maps unknown strike_type to "other"', () => {
+  it('maps unknown strike_type id to "other"', () => {
     const unknown = { ...SAMPLE_RECORD, strike_type: [99999] };
     const r = normalizeAirwarsRecord(unknown, TAXONOMIES)!;
     expect(r.category).toBe('other');
   });
 
+  it('maps airstrike-and-or-artillery slug to airstrike category', () => {
+    const r = normalizeAirwarsRecord({ ...SAMPLE_RECORD, strike_type: [432] }, TAXONOMIES)!;
+    expect(r.category).toBe('airstrike');
+  });
+
+  it('maps drone-strike slug to airstrike category', () => {
+    const r = normalizeAirwarsRecord({ ...SAMPLE_RECORD, strike_type: [434] }, TAXONOMIES)!;
+    expect(r.category).toBe('airstrike');
+  });
+
+  it('maps naval-bombardment slug to shelling category', () => {
+    const r = normalizeAirwarsRecord({ ...SAMPLE_RECORD, strike_type: [643] }, TAXONOMIES)!;
+    expect(r.category).toBe('shelling');
+  });
+
   it('maps ground-operation slug to ground_op category', () => {
-    const ground = { ...SAMPLE_RECORD, strike_type: [433] };
-    const r = normalizeAirwarsRecord(ground, TAXONOMIES)!;
+    const r = normalizeAirwarsRecord({ ...SAMPLE_RECORD, strike_type: [752] }, TAXONOMIES)!;
     expect(r.category).toBe('ground_op');
   });
 });
