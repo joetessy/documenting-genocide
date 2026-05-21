@@ -63,6 +63,9 @@ export function pickPrimaryCoord(geos: RawGeo[]): { lat: number; lon: number } |
   const lon = Number(primary.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
   if (lat === 0 && lon === 0) return null;
+  // World-range validation: reject anything physically impossible.
+  if (lat < -90 || lat > 90) return null;
+  if (lon < -180 || lon > 180) return null;
   return { lat, lon };
 }
 
@@ -74,14 +77,43 @@ function pickCasualtyMax(bucket: RawCasualtyBucket | undefined, key: 'killed_max
   return Number.isFinite(n) ? n : null;
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+export function decodeHtmlEntities(s: string): string {
+  return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, body: string) => {
+    if (body.startsWith('#x') || body.startsWith('#X')) {
+      const code = parseInt(body.slice(2), 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    if (body.startsWith('#')) {
+      const code = parseInt(body.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    return NAMED_ENTITIES[body] ?? match;
+  });
+}
+
+// Strike-type slugs from data/raw/airwars/taxonomies.json. Map each real slug
+// to one of the six IncidentCategory values. Anything genuinely ambiguous
+// (e.g. unknown) falls through to 'other'.
 const STRIKE_TYPE_TO_CATEGORY: Record<string, IncidentCategory> = {
-  'airstrike-artillery': 'airstrike',
   'airstrike': 'airstrike',
+  'airstrike-and-or-artillery': 'airstrike',
+  'drone-strike': 'airstrike',
   'artillery': 'shelling',
-  'shelling': 'shelling',
+  'naval-bombardment': 'shelling',
   'ground-operation': 'ground_op',
-  'detention': 'detention',
-  'attack-on-aid': 'attack_on_aid',
+  'counter-terrorism-action-ground': 'ground_op',
+  'mine': 'other',
+  'sea-drone': 'other',
+  'unknown': 'other',
 };
 
 function mapCategory(strikeTypeIds: number[], tax: AirwarsTaxonomies): IncidentCategory {
@@ -118,7 +150,9 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
   const coord = pickPrimaryCoord(raw.acf?.geolocations ?? []);
   if (!coord) return null;
 
-  const refCode = raw.acf?.unique_reference_code ?? String(raw.id);
+  // Raw refCode may have surrounding whitespace ("ISPT0097 ") — always trim.
+  const rawRefCode = (raw.acf?.unique_reference_code ?? '').trim();
+  const refCode = rawRefCode || String(raw.id);
   const rating = mapRating(raw.civilian_harm_status ?? [], tax);
 
   const source: SourceAttribution = {
@@ -129,7 +163,10 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
   };
 
   return {
-    id: `airwars:${refCode}`,
+    // WP post id is numeric and guaranteed unique; unique_reference_code is
+    // reused across distinct raw records in the snapshot, so it's only safe
+    // for the human-facing source citation, not the Incident's primary id.
+    id: `airwars:${raw.id}`,
     date,
     location: {
       lat: coord.lat,
@@ -143,7 +180,7 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
       killed_children: pickCasualtyMax(raw.acf?.killed_injured_children, 'killed_max'),
       killed_women: pickCasualtyMax(raw.acf?.killed_injured_women, 'killed_max'),
     },
-    description: raw.title?.rendered ?? '',
+    description: decodeHtmlEntities(raw.title?.rendered ?? ''),
     sources: [source],
   };
 }
