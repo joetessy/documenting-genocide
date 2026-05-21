@@ -5,6 +5,7 @@ import { loadIncidents } from './data/loader';
 import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
 import { TimeController } from './time/time-controller';
+import { mountScrubber } from './time/scrubber';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
@@ -35,6 +36,8 @@ async function start(): Promise<void> {
 
   timeCtrl.onChange((date) => markers.setVisibleDate(date));
   markers.setVisibleDate(timeCtrl.currentDate);
+
+  void mountScrubber(app, timeCtrl);
 
   map.on('mousemove', 'incidents-circles', (e) => {
     if (!e.features || e.features.length === 0) return;
