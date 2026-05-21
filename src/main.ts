@@ -1,6 +1,7 @@
 import './style.css';
 import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
+import { mountDamageLayer } from './map/damage-layer';
 import { loadIncidents } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
@@ -8,6 +9,7 @@ import { bucketByDay, renderHistogram } from './time/histogram';
 import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
 import { mountLoading } from './ui/loading';
+import { mountLayerToggle } from './ui/layer-toggle';
 import { parseHash, formatHash } from './url-state';
 
 async function start(): Promise<void> {
@@ -31,6 +33,15 @@ async function start(): Promise<void> {
   const tooltip = mountTooltip(app);
   const sidePanel = mountSidePanel(app);
   const byId = new Map(incidents.map((i) => [i.id, i]));
+
+  const damage = await mountDamageLayer(map, '/data/damage.geojson');
+  const layerToggle = mountLayerToggle(app);
+  layerToggle.onChange((s) => {
+    damage.setVisible(s.damage);
+    if (map.getLayer('incidents-circles')) {
+      map.setLayoutProperty('incidents-circles', 'visibility', s.incidents ? 'visible' : 'none');
+    }
+  });
 
   const firstDate = incidents[0]?.date ?? '2023-10-07';
   const lastDate = incidents[incidents.length - 1]?.date ?? '2024-12-31';
