@@ -2,23 +2,30 @@ import './style.css';
 import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { loadIncidents } from './data/loader';
-import { mountTooltip } from './ui/tooltip';
-import { mountSidePanel } from './ui/side-panel';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
 import { bucketByDay, renderHistogram } from './time/histogram';
+import { mountTooltip } from './ui/tooltip';
+import { mountSidePanel } from './ui/side-panel';
+import { mountLoading } from './ui/loading';
+import { parseHash, formatHash } from './url-state';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
   if (!app) throw new Error('#app element not found');
+
+  const loading = mountLoading(app);
+  loading.setStatus('Loading map…');
 
   const mapEl = document.createElement('div');
   mapEl.id = 'map';
   app.appendChild(mapEl);
 
   const map = mountMap(mapEl);
+
+  loading.setStatus('Loading incidents from Airwars…');
   const { incidents, meta } = await loadIncidents();
-  console.log(`Loaded ${incidents.length} incidents, build ${meta.build_date}`);
+  console.log(`Loaded ${incidents.length} incidents (${meta.unplotted_count} unplotted), build ${meta.build_date}`);
 
   const markers = mountMarkers(map, incidents);
   const tooltip = mountTooltip(app);
@@ -27,21 +34,26 @@ async function start(): Promise<void> {
 
   const firstDate = incidents[0]?.date ?? '2023-10-07';
   const lastDate = incidents[incidents.length - 1]?.date ?? '2024-12-31';
+  const initial = parseHash(location.hash);
 
   const timeCtrl = new TimeController({
     start: firstDate,
     end: lastDate,
     stepDaysPerSecond: 3,
-    initialDate: lastDate,
+    initialDate: initial.date ?? lastDate,
   });
 
-  timeCtrl.onChange((date) => markers.setVisibleDate(date));
+  timeCtrl.onChange((date) => {
+    markers.setVisibleDate(date);
+    const newHash = formatHash({ date });
+    if (newHash !== location.hash) {
+      history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
+    }
+  });
   markers.setVisibleDate(timeCtrl.currentDate);
 
   const histogramHost = mountScrubber(app, timeCtrl);
-
   const buckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
-  // Wait one frame so the host has a computed width.
   requestAnimationFrame(() => renderHistogram(histogramHost, buckets));
   window.addEventListener('resize', () => renderHistogram(histogramHost, buckets));
 
@@ -55,7 +67,6 @@ async function start(): Promise<void> {
     markers.setHoveredId(id);
     tooltip.show(incident, e.originalEvent.clientX, e.originalEvent.clientY);
   });
-
   map.on('mouseleave', 'incidents-circles', () => {
     map.getCanvas().style.cursor = '';
     markers.setHoveredId(null);
@@ -70,6 +81,9 @@ async function start(): Promise<void> {
     if (!incident) return;
     sidePanel.open(incident);
   });
+
+  // Wait for map's first render before hiding loading.
+  map.once('idle', () => loading.destroy());
 }
 
 start().catch((err) => {
