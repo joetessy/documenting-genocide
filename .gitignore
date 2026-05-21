@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+*.log
+
+# Brainstorming companion working files
+.superpowers/
+
+# Raw cached source data (regeneratable, large)
+data/raw/
