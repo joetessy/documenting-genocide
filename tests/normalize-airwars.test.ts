@@ -4,6 +4,7 @@ import {
   parseAirwarsDate,
   pickPrimaryCoord,
   decodeHtmlEntities,
+  isInGazaBbox,
 } from '../scripts/normalize-airwars';
 
 const TAXONOMIES = {
@@ -105,6 +106,21 @@ describe('pickPrimaryCoord', () => {
   });
 });
 
+describe('isInGazaBbox', () => {
+  it('accepts points inside Gaza', () => {
+    expect(isInGazaBbox(31.5, 34.4)).toBe(true);     // Gaza City area
+    expect(isInGazaBbox(31.21, 34.21)).toBe(true);   // SW corner
+    expect(isInGazaBbox(31.59, 34.59)).toBe(true);   // NE corner
+  });
+
+  it('rejects points outside Gaza', () => {
+    expect(isInGazaBbox(34.49, 31.50)).toBe(false);  // the swapped-coord case
+    expect(isInGazaBbox(31.7, 34.4)).toBe(false);    // north of Gaza
+    expect(isInGazaBbox(31.5, 34.7)).toBe(false);    // east of Gaza
+    expect(isInGazaBbox(0, 0)).toBe(false);
+  });
+});
+
 describe('decodeHtmlEntities', () => {
   it('decodes named entities', () => {
     expect(decodeHtmlEntities('AT&amp;T')).toBe('AT&T');
@@ -168,6 +184,17 @@ describe('normalizeAirwarsRecord', () => {
   it('returns null when coordinates are missing (record is unplotted)', () => {
     const noGeo = { ...SAMPLE_RECORD, acf: { ...SAMPLE_RECORD.acf, geolocations: [] } };
     expect(normalizeAirwarsRecord(noGeo, TAXONOMIES)).toBeNull();
+  });
+
+  it('returns null when coordinates are outside Gaza bbox', () => {
+    const outOfBbox = {
+      ...SAMPLE_RECORD,
+      acf: {
+        ...SAMPLE_RECORD.acf,
+        geolocations: [{ latitude: 34.49, longitude: 31.50, primary_coordinate: true }],
+      },
+    };
+    expect(normalizeAirwarsRecord(outOfBbox, TAXONOMIES)).toBeNull();
   });
 
   it('returns null when coordinates are out of world range', () => {

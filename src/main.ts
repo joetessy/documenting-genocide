@@ -82,6 +82,13 @@ async function start(): Promise<void> {
     sidePanel.open(incident);
   });
 
+  map.on('click', (e) => {
+    const hits = map.queryRenderedFeatures(e.point, { layers: ['incidents-circles'] });
+    if (hits.length === 0) {
+      sidePanel.close();
+    }
+  });
+
   // Wait for map's first render before hiding loading.
   map.once('idle', () => loading.destroy());
 }

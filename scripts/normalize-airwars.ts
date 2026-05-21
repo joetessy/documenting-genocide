@@ -69,6 +69,10 @@ export function pickPrimaryCoord(geos: RawGeo[]): { lat: number; lon: number } |
   return { lat, lon };
 }
 
+export function isInGazaBbox(lat: number, lon: number): boolean {
+  return lat >= 31.20 && lat <= 31.60 && lon >= 34.20 && lon <= 34.60;
+}
+
 function pickCasualtyMax(bucket: RawCasualtyBucket | undefined, key: 'killed_max' | 'injured_max'): number | null {
   if (!bucket) return null;
   const v = bucket[key];
@@ -149,6 +153,7 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
 
   const coord = pickPrimaryCoord(raw.acf?.geolocations ?? []);
   if (!coord) return null;
+  if (!isInGazaBbox(coord.lat, coord.lon)) return null;
 
   // Raw refCode may have surrounding whitespace ("ISPT0097 ") — always trim.
   const rawRefCode = (raw.acf?.unique_reference_code ?? '').trim();
