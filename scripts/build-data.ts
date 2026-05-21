@@ -2,14 +2,17 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fetchAirwars } from './fetch-airwars';
 import { fetchUcdp } from './fetch-ucdp';
+import { fetchOcha } from './fetch-ocha';
 import { normalizeAirwarsRecord, type AirwarsTaxonomies, type ArticleData } from './normalize-airwars';
 import { normalizeUcdpRecord } from './normalize-ucdp';
+import { normalizeOchaFeature } from './normalize-ocha';
 import { dedupeIncidents } from './dedupe';
-import type { Incident, BuildMeta } from '../shared/types';
+import type { Incident, BuildMeta, DamageRecord, DamageStatus } from '../shared/types';
 
 const AIRWARS_RAW = 'data/raw/airwars';
 const ARTICLES_DIR = 'data/raw/airwars/articles';
 const UCDP_RAW = 'data/raw/ucdp';
+const OCHA_RAW = 'data/raw/ocha';
 const OUT_DIR = 'public/data';
 
 async function loadAirwarsPages(): Promise<unknown[]> {
@@ -46,9 +49,17 @@ async function loadUcdpRows(): Promise<unknown[]> {
   } catch { return []; }
 }
 
+async function loadOchaFeatures(): Promise<GeoJSON.Feature[]> {
+  try {
+    const fc = JSON.parse(await readFile(join(OCHA_RAW, 'damage.geojson'), 'utf8')) as GeoJSON.FeatureCollection;
+    return fc.features ?? [];
+  } catch { return []; }
+}
+
 async function main(): Promise<void> {
   await fetchAirwars();
   await fetchUcdp();
+  await fetchOcha();
 
   const airwarsRaws = await loadAirwarsPages();
   const taxonomies = await loadTaxonomies();
@@ -81,11 +92,48 @@ async function main(): Promise<void> {
 
   await mkdir(OUT_DIR, { recursive: true });
   await writeFile(join(OUT_DIR, 'incidents.json'), JSON.stringify(incidents));
+
+  // OCHA UNOSAT damage layer
+  const ochaFeatures = await loadOchaFeatures();
+  console.log(`Loaded ${ochaFeatures.length} OCHA damage features`);
+  const damageRecords: DamageRecord[] = [];
+  let ochaRejected = 0;
+  const statusCounts: Record<DamageStatus, number> = {
+    destroyed: 0,
+    severe: 0,
+    moderate: 0,
+    possibly_damaged: 0,
+  };
+  for (const feat of ochaFeatures) {
+    const dr = normalizeOchaFeature(feat);
+    if (dr) {
+      damageRecords.push(dr);
+      statusCounts[dr.status]++;
+    } else {
+      ochaRejected++;
+    }
+  }
+  console.log(`Normalized ${damageRecords.length} damage records (${ochaRejected} rejected as non-buildings/out-of-bbox)`);
+  console.log(`  Damage distribution: destroyed=${statusCounts.destroyed}, severe=${statusCounts.severe}, moderate=${statusCounts.moderate}, possibly_damaged=${statusCounts.possibly_damaged}`);
+
+  const damageFc: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: damageRecords.map((d) => ({
+      type: 'Feature',
+      id: d.id,
+      geometry: { type: 'Point', coordinates: [d.location.lon, d.location.lat] },
+      properties: { id: d.id, status: d.status, assessment_date: d.assessment_date },
+    })),
+  };
+  await writeFile(join(OUT_DIR, 'damage.geojson'), JSON.stringify(damageFc));
+  console.log(`Wrote ${damageRecords.length} damage records to ${OUT_DIR}/damage.geojson`);
+
   const meta: BuildMeta = {
     build_date: new Date().toISOString(),
     source_counts: { airwars: airwarsIncidents.length, ucdp: ucdpIncidents.length },
     dedup_merges: merges,
     unplotted_count: airwarsUnplotted + ucdpUnplotted,
+    damage_count: damageRecords.length,
   };
   await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
 
