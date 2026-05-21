@@ -6,6 +6,7 @@ import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
+import { bucketByDay, renderHistogram } from './time/histogram';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
@@ -37,7 +38,12 @@ async function start(): Promise<void> {
   timeCtrl.onChange((date) => markers.setVisibleDate(date));
   markers.setVisibleDate(timeCtrl.currentDate);
 
-  void mountScrubber(app, timeCtrl);
+  const histogramHost = mountScrubber(app, timeCtrl);
+
+  const buckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
+  // Wait one frame so the host has a computed width.
+  requestAnimationFrame(() => renderHistogram(histogramHost, buckets));
+  window.addEventListener('resize', () => renderHistogram(histogramHost, buckets));
 
   map.on('mousemove', 'incidents-circles', (e) => {
     if (!e.features || e.features.length === 0) return;
