@@ -24,6 +24,15 @@ pnpm typecheck    # tsc --noEmit
 ## Data sources
 
 - [Airwars](https://airwars.org/) civilian-harm incidents (~2,700 Gaza records). No public API docs; we use the WordPress REST API at `https://airwars.org/wp-json/wp/v2/civ?country=767`. Attribution required.
+- [ACLED (Armed Conflict Location & Event Data)](https://acleddata.com/) Palestine/Gaza events. Free academic API. Register at https://acleddata.com/register-for-access/ and set `ACLED_USERNAME` and `ACLED_PASSWORD` in `.env`. Attribution required.
+
+## Phase 2 data pipeline
+
+The build pipeline fetches and reconciles two sources:
+- **Airwars** — civilian-harm incidents with credibility ratings. We also scrape each incident's article page for the narrative paragraphs ("assessed" incidents only; "researched but not assessed" stubs are skipped).
+- **ACLED** — conflict-event records with broader actor/event-type taxonomy.
+
+Records from both sources are merged by `(date, lat rounded to 3 decimals, lon rounded to 3 decimals)` ≈ 110m precision. Multi-source incidents preserve every source attribution in the side panel.
 
 ## Design
 
