@@ -7,6 +7,3 @@ dist/
 
 # Brainstorming companion working files
 .superpowers/
-
-# Raw cached source data (regeneratable, large)
-data/raw/
