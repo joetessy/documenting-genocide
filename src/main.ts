@@ -4,6 +4,7 @@ import { mountMarkers } from './map/marker-layer';
 import { loadIncidents } from './data/loader';
 import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
+import { TimeController } from './time/time-controller';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
@@ -22,9 +23,18 @@ async function start(): Promise<void> {
   const sidePanel = mountSidePanel(app);
   const byId = new Map(incidents.map((i) => [i.id, i]));
 
-  // Temporarily reveal everything until TimeController lands in Task 12.
-  const latest = incidents[incidents.length - 1]?.date ?? '2026-01-01';
-  markers.setVisibleDate(latest);
+  const firstDate = incidents[0]?.date ?? '2023-10-07';
+  const lastDate = incidents[incidents.length - 1]?.date ?? '2024-12-31';
+
+  const timeCtrl = new TimeController({
+    start: firstDate,
+    end: lastDate,
+    stepDaysPerSecond: 3,
+    initialDate: lastDate,
+  });
+
+  timeCtrl.onChange((date) => markers.setVisibleDate(date));
+  markers.setVisibleDate(timeCtrl.currentDate);
 
   map.on('mousemove', 'incidents-circles', (e) => {
     if (!e.features || e.features.length === 0) return;
