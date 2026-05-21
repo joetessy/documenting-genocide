@@ -1,0 +1,149 @@
+import type {
+  Incident,
+  IncidentCategory,
+  CredibilityRating,
+  SourceAttribution,
+} from '../shared/types';
+
+export interface AirwarsTaxonomies {
+  civilian_harm_status: Record<string, { name: string; slug: string }>;
+  strike_type: Record<string, { name: string; slug: string }>;
+  casualty: Record<string, { name: string; slug: string }>;
+}
+
+interface RawGeo {
+  latitude: number | string;
+  longitude: number | string;
+  primary_coordinate?: boolean;
+  geolocation_accuracy?: string;
+}
+
+interface RawCasualtyBucket {
+  killed_min?: number | string;
+  killed_max?: number | string;
+  injured_min?: number | string;
+  injured_max?: number | string;
+}
+
+interface RawAirwarsRecord {
+  id: number;
+  link: string;
+  title: { rendered: string };
+  civilian_harm_status: number[];
+  strike_type: number[];
+  acf: {
+    unique_reference_code?: string;
+    incident_date?: string;
+    location_name?: string;
+    region?: string;
+    governorate?: string;
+    geolocations?: RawGeo[];
+    killed_injured_civilian_non_combatants?: RawCasualtyBucket;
+    killed_injured_children?: RawCasualtyBucket;
+    killed_injured_women?: RawCasualtyBucket;
+    killed_injured_men?: RawCasualtyBucket;
+  };
+}
+
+export function parseAirwarsDate(yyyymmdd: string): string | null {
+  if (!/^\d{8}$/.test(yyyymmdd)) return null;
+  const y = yyyymmdd.slice(0, 4);
+  const m = yyyymmdd.slice(4, 6);
+  const d = yyyymmdd.slice(6, 8);
+  const mn = Number(m);
+  const dn = Number(d);
+  if (mn < 1 || mn > 12 || dn < 1 || dn > 31) return null;
+  return `${y}-${m}-${d}`;
+}
+
+export function pickPrimaryCoord(geos: RawGeo[]): { lat: number; lon: number } | null {
+  if (!geos || geos.length === 0) return null;
+  const primary = geos.find((g) => g.primary_coordinate === true) ?? geos[0];
+  const lat = Number(primary.latitude);
+  const lon = Number(primary.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat === 0 && lon === 0) return null;
+  return { lat, lon };
+}
+
+function pickCasualtyMax(bucket: RawCasualtyBucket | undefined, key: 'killed_max' | 'injured_max'): number | null {
+  if (!bucket) return null;
+  const v = bucket[key];
+  if (v === '' || v === undefined || v === null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+const STRIKE_TYPE_TO_CATEGORY: Record<string, IncidentCategory> = {
+  'airstrike-artillery': 'airstrike',
+  'airstrike': 'airstrike',
+  'artillery': 'shelling',
+  'shelling': 'shelling',
+  'ground-operation': 'ground_op',
+  'detention': 'detention',
+  'attack-on-aid': 'attack_on_aid',
+};
+
+function mapCategory(strikeTypeIds: number[], tax: AirwarsTaxonomies): IncidentCategory {
+  for (const id of strikeTypeIds) {
+    const term = tax.strike_type[String(id)];
+    if (!term) continue;
+    const mapped = STRIKE_TYPE_TO_CATEGORY[term.slug];
+    if (mapped) return mapped;
+  }
+  return 'other';
+}
+
+const RATING_SLUGS: Record<string, CredibilityRating> = {
+  fair: 'fair',
+  weak: 'weak',
+  contested: 'contested',
+  confirmed: 'confirmed',
+};
+
+function mapRating(statusIds: number[], tax: AirwarsTaxonomies): CredibilityRating | undefined {
+  for (const id of statusIds) {
+    const term = tax.civilian_harm_status[String(id)];
+    if (!term) continue;
+    const slug = term.slug.toLowerCase();
+    if (RATING_SLUGS[slug]) return RATING_SLUGS[slug];
+  }
+  return undefined;
+}
+
+export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxonomies): Incident | null {
+  const date = parseAirwarsDate(raw.acf?.incident_date ?? '');
+  if (!date) return null;
+
+  const coord = pickPrimaryCoord(raw.acf?.geolocations ?? []);
+  if (!coord) return null;
+
+  const refCode = raw.acf?.unique_reference_code ?? String(raw.id);
+  const rating = mapRating(raw.civilian_harm_status ?? [], tax);
+
+  const source: SourceAttribution = {
+    org: 'airwars',
+    id: refCode,
+    url: raw.link,
+    ...(rating ? { rating } : {}),
+  };
+
+  return {
+    id: `airwars:${refCode}`,
+    date,
+    location: {
+      lat: coord.lat,
+      lon: coord.lon,
+      name: raw.acf?.location_name || raw.acf?.region || undefined,
+    },
+    category: mapCategory(raw.strike_type ?? [], tax),
+    casualties: {
+      killed: pickCasualtyMax(raw.acf?.killed_injured_civilian_non_combatants, 'killed_max'),
+      injured: pickCasualtyMax(raw.acf?.killed_injured_civilian_non_combatants, 'injured_max'),
+      killed_children: pickCasualtyMax(raw.acf?.killed_injured_children, 'killed_max'),
+      killed_women: pickCasualtyMax(raw.acf?.killed_injured_women, 'killed_max'),
+    },
+    description: raw.title?.rendered ?? '',
+    sources: [source],
+  };
+}
