@@ -1,13 +1,10 @@
 import maplibregl, { Map } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
+import { gazaStyle } from './style';
 
-const PROTOMAPS_TILES = 'https://demo-bucket.protomaps.com/v3.pmtiles';
-
-// Gaza Strip bounding box (a little generous so the user can pan the edges in).
-// SW corner, NE corner.
 const GAZA_BOUNDS: [[number, number], [number, number]] = [
-  [34.20, 31.20],  // SW: south of Rafah, west of coast
-  [34.60, 31.60],  // NE: north of Beit Hanoun, east of border
+  [34.20, 31.20],
+  [34.60, 31.60],
 ];
 
 const GAZA_CENTER: [number, number] = [34.40, 31.45];
@@ -18,36 +15,7 @@ export function mountMap(container: HTMLElement): Map {
 
   const map = new maplibregl.Map({
     container,
-    style: {
-      version: 8,
-      glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-      sources: {
-        protomaps: {
-          type: 'vector',
-          url: `pmtiles://${PROTOMAPS_TILES}`,
-          attribution:
-            '<a href="https://protomaps.com">Protomaps</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        },
-      },
-      // Placeholder layers — Task 8 replaces with the muted cartographic style.
-      layers: [
-        { id: 'background', type: 'background', paint: { 'background-color': '#f4ede0' } },
-        {
-          id: 'water',
-          type: 'fill',
-          source: 'protomaps',
-          'source-layer': 'water',
-          paint: { 'fill-color': '#c8d4dc' },
-        },
-        {
-          id: 'land',
-          type: 'fill',
-          source: 'protomaps',
-          'source-layer': 'landuse',
-          paint: { 'fill-color': '#dcc8a0', 'fill-opacity': 0.3 },
-        },
-      ],
-    },
+    style: gazaStyle(),
     center: GAZA_CENTER,
     zoom: 10,
     pitch: 30,
