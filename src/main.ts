@@ -1,5 +1,6 @@
 import './style.css';
 import { mountMap } from './map/map';
+import { mountMarkers } from './map/marker-layer';
 import { loadIncidents } from './data/loader';
 
 async function start(): Promise<void> {
@@ -11,11 +12,14 @@ async function start(): Promise<void> {
   app.appendChild(mapEl);
 
   const map = mountMap(mapEl);
-
   const { incidents, meta } = await loadIncidents();
   console.log(`Loaded ${incidents.length} incidents, build ${meta.build_date}`);
-  // Marker rendering wired up in Task 9.
-  void map;
+
+  const markers = mountMarkers(map, incidents);
+
+  // Temporarily reveal everything until TimeController lands in Task 12.
+  const latest = incidents[incidents.length - 1]?.date ?? '2026-01-01';
+  markers.setVisibleDate(latest);
 }
 
 start().catch((err) => {
