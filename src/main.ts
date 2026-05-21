@@ -3,6 +3,7 @@ import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { loadIncidents } from './data/loader';
 import { mountTooltip } from './ui/tooltip';
+import { mountSidePanel } from './ui/side-panel';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
@@ -18,6 +19,7 @@ async function start(): Promise<void> {
 
   const markers = mountMarkers(map, incidents);
   const tooltip = mountTooltip(app);
+  const sidePanel = mountSidePanel(app);
   const byId = new Map(incidents.map((i) => [i.id, i]));
 
   // Temporarily reveal everything until TimeController lands in Task 12.
@@ -39,6 +41,15 @@ async function start(): Promise<void> {
     map.getCanvas().style.cursor = '';
     markers.setHoveredId(null);
     tooltip.hide();
+  });
+
+  map.on('click', 'incidents-circles', (e) => {
+    if (!e.features || e.features.length === 0) return;
+    const id = e.features[0].properties?.id as string | undefined;
+    if (!id) return;
+    const incident = byId.get(id);
+    if (!incident) return;
+    sidePanel.open(incident);
   });
 }
 
