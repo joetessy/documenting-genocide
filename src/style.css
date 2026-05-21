@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'maplibre-gl/dist/maplibre-gl.css';
 
 html, body {
   margin: 0;
@@ -14,4 +15,11 @@ html, body {
   height: 100vh;
   overflow: hidden;
   position: relative;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
