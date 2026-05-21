@@ -253,3 +253,45 @@ describe('normalizeAirwarsRecord', () => {
     expect(r.category).toBe('ground_op');
   });
 });
+
+describe('normalizeAirwarsRecord with article narratives', () => {
+  it('uses article paragraphs when status is "assessed"', () => {
+    const articles = new Map([
+      ['ispt0097-october-10-2023', {
+        slug: 'ispt0097-october-10-2023',
+        status: 'assessed' as const,
+        paragraphs: [
+          'On October 10th 2023, at least 2 civilians were killed when a residential building was struck.',
+          'Sources on social media identified the victims as members of the Al-Tatar family.',
+        ],
+      }],
+    ]);
+    const r = normalizeAirwarsRecord(SAMPLE_RECORD, TAXONOMIES, articles)!;
+    expect(r.description).toEqual([
+      'On October 10th 2023, at least 2 civilians were killed when a residential building was struck.',
+      'Sources on social media identified the victims as members of the Al-Tatar family.',
+    ]);
+  });
+
+  it('falls back to title when article status is "stub"', () => {
+    const articles = new Map([
+      ['ispt0097-october-10-2023', {
+        slug: 'ispt0097-october-10-2023',
+        status: 'stub' as const,
+        paragraphs: [],
+      }],
+    ]);
+    const r = normalizeAirwarsRecord(SAMPLE_RECORD, TAXONOMIES, articles)!;
+    expect(r.description).toEqual(['ISPT0097 – October 10, 2023']);
+  });
+
+  it('falls back to title when no article is found in the map', () => {
+    const r = normalizeAirwarsRecord(SAMPLE_RECORD, TAXONOMIES, new Map())!;
+    expect(r.description).toEqual(['ISPT0097 – October 10, 2023']);
+  });
+
+  it('still works with no articles argument (backwards compatible)', () => {
+    const r = normalizeAirwarsRecord(SAMPLE_RECORD, TAXONOMIES)!;
+    expect(r.description).toEqual(['ISPT0097 – October 10, 2023']);
+  });
+});

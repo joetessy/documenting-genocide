@@ -4,6 +4,9 @@ import type {
   CredibilityRating,
   SourceAttribution,
 } from '../shared/types';
+import { type ArticleData, slugFromLink } from './scrape-airwars-articles';
+
+export type { ArticleData };
 
 export interface AirwarsTaxonomies {
   civilian_harm_status: Record<string, { name: string; slug: string }>;
@@ -147,7 +150,11 @@ function mapRating(statusIds: number[], tax: AirwarsTaxonomies): CredibilityRati
   return undefined;
 }
 
-export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxonomies): Incident | null {
+export function normalizeAirwarsRecord(
+  raw: RawAirwarsRecord,
+  tax: AirwarsTaxonomies,
+  articles?: Map<string, ArticleData>,
+): Incident | null {
   const date = parseAirwarsDate(raw.acf?.incident_date ?? '');
   if (!date) return null;
 
@@ -167,6 +174,19 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
     ...(rating ? { rating } : {}),
   };
 
+  const titleDescription = decodeHtmlEntities(raw.title?.rendered ?? '');
+  let description: string[] = titleDescription.length > 0 ? [titleDescription] : [];
+
+  if (articles) {
+    const slug = slugFromLink(raw.link);
+    if (slug) {
+      const article = articles.get(slug);
+      if (article && article.status === 'assessed' && article.paragraphs.length > 0) {
+        description = article.paragraphs;
+      }
+    }
+  }
+
   return {
     // WP post id is numeric and guaranteed unique; unique_reference_code is
     // reused across distinct raw records in the snapshot, so it's only safe
@@ -185,7 +205,7 @@ export function normalizeAirwarsRecord(raw: RawAirwarsRecord, tax: AirwarsTaxono
       killed_children: pickCasualtyMax(raw.acf?.killed_injured_children, 'killed_max'),
       killed_women: pickCasualtyMax(raw.acf?.killed_injured_women, 'killed_max'),
     },
-    description: [decodeHtmlEntities(raw.title?.rendered ?? '')].filter((s) => s.length > 0),
+    description,
     sources: [source],
   };
 }
