@@ -1,9 +1,13 @@
 import maplibregl, { Map } from 'maplibre-gl';
 import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
 
-const GAZA_BOUNDS: [[number, number], [number, number]] = [
-  [34.20, 31.20],
-  [34.60, 31.60],
+// Generous navigation bounds. The cream mask hides everything outside Gaza
+// visually, so the user can rotate/tilt/pan freely without ever seeing Israel
+// or Egypt. These bounds just prevent dragging the camera into the open
+// Mediterranean or somewhere far away on accident.
+const NAV_BOUNDS: [[number, number], [number, number]] = [
+  [33.5, 30.5],
+  [35.5, 32.5],
 ];
 
 const GAZA_CENTER: [number, number] = [34.40, 31.45];
@@ -23,7 +27,7 @@ export function mountMap(container: HTMLElement): Map {
     zoom: 10.5,
     pitch: 45,           // generous tilt so 3D buildings register on first load
     bearing: 0,
-    maxBounds: GAZA_BOUNDS,
+    maxBounds: NAV_BOUNDS,
     minZoom: 9,
     maxZoom: 17,
     maxPitch: 70,
