@@ -102,17 +102,38 @@ async function start(): Promise<void> {
     tooltip.hide();
   });
 
+  // Build a quick lookup of damage features by id, so clicks can hydrate the panel.
+  const damageById = new Map(damageData.features.map((f) => [f.properties.id, f]));
+
   map.on('click', 'incidents-circles', (e) => {
     if (!e.features || e.features.length === 0) return;
     const id = e.features[0].properties?.id as string | undefined;
     if (!id) return;
     const incident = byId.get(id);
     if (!incident) return;
-    sidePanel.open(incident);
+    sidePanel.openIncident(incident);
+  });
+
+  map.on('click', 'damage-circles', (e) => {
+    if (!e.features || e.features.length === 0) return;
+    const id = e.features[0].properties?.id as string | undefined;
+    if (!id) return;
+    const damageFeat = damageById.get(id);
+    if (!damageFeat) return;
+    sidePanel.openDamage(damageFeat);
+  });
+
+  map.on('mouseenter', 'damage-circles', () => {
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', 'damage-circles', () => {
+    map.getCanvas().style.cursor = '';
   });
 
   map.on('click', (e) => {
-    const hits = map.queryRenderedFeatures(e.point, { layers: ['incidents-circles'] });
+    const hits = map.queryRenderedFeatures(e.point, {
+      layers: ['incidents-circles', 'damage-circles'].filter((l) => map.getLayer(l)),
+    });
     if (hits.length === 0) {
       sidePanel.close();
     }
