@@ -25,6 +25,11 @@ const FIELDS_PARAM = SENSOR_FIELDS.join(',');
 // Codes 1-4 mean the building was damaged at that pass; 5+ are other classes.
 const DAMAGE_CODES = new Set([1, 2, 3, 4]);
 
+interface DamagePass {
+  date: string;     // ISO YYYY-MM-DD
+  class: number;    // 1=destroyed 2=severe 3=moderate 4=possibly_damaged (others ignored)
+}
+
 interface SlimFeature {
   type: 'Feature';
   geometry: { type: 'Point'; coordinates: [number, number] };
@@ -32,6 +37,8 @@ interface SlimFeature {
     OBJECTID: number;
     first_damage_date: string;
     latest_damage_class: number;
+    governorate: string;
+    progression: DamagePass[];      // ALL damaged passes, chronologically
     Grouped_Damage_Classes: number;
   };
 }
@@ -69,20 +76,25 @@ function epochToIso(v: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
-// Extract the EARLIEST sensor pass at which this building was classified as
-// damaged (codes 1-4), plus the most recent damage code. Returns null if the
-// building was never damaged.
-export function extractDamageTimeline(props: Record<string, unknown>): { first: string; latest: number } | null {
-  const passes: Array<{ date: unknown; code: unknown }> = [
+// Extract:
+//   - first_damage_date: EARLIEST sensor pass at which this building was
+//     classified as damaged (codes 1-4)
+//   - latest_damage_class: most recent damaged code
+//   - progression: full chronological list of damaged passes (date + class)
+// Returns null if the building was never damaged.
+export function extractDamageTimeline(props: Record<string, unknown>):
+  | { first: string; latest: number; progression: DamagePass[] }
+  | null {
+  const rawPasses: Array<{ date: unknown; code: unknown }> = [
     { date: props.SensorDate, code: props.Main_Damage_Site_Class },
   ];
   for (let i = 2; i <= 14; i++) {
-    passes.push({ date: props[`SensorDate_${i}`], code: props[`Main_Damage_Site_Class_${i}`] });
+    rawPasses.push({ date: props[`SensorDate_${i}`], code: props[`Main_Damage_Site_Class_${i}`] });
   }
 
   type Pass = { dateIso: string; code: number };
   const dated: Pass[] = [];
-  for (const p of passes) {
+  for (const p of rawPasses) {
     const iso = epochToIso(p.date);
     if (!iso) continue;
     if (typeof p.code !== 'number') continue;
@@ -92,14 +104,19 @@ export function extractDamageTimeline(props: Record<string, unknown>): { first: 
 
   let firstDate: string | null = null;
   let latestCode: number | null = null;
+  const progression: DamagePass[] = [];
   for (const p of dated) {
     if (DAMAGE_CODES.has(p.code)) {
       if (firstDate === null) firstDate = p.dateIso;
       latestCode = p.code;
+      // Only record CHANGES — if the class stayed the same, no new entry.
+      if (progression.length === 0 || progression[progression.length - 1].class !== p.code) {
+        progression.push({ date: p.dateIso, class: p.code });
+      }
     }
   }
   if (firstDate === null || latestCode === null) return null;
-  return { first: firstDate, latest: latestCode };
+  return { first: firstDate, latest: latestCode, progression };
 }
 
 export async function fetchOcha(opts: { refresh?: boolean } = {}): Promise<void> {
@@ -132,6 +149,8 @@ export async function fetchOcha(opts: { refresh?: boolean } = {}): Promise<void>
       const id = props.OBJECTID;
       if (typeof id !== 'number') continue;
 
+      const governorate = typeof props.Governorate === 'string' ? props.Governorate : '';
+
       all.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: coords },
@@ -139,6 +158,8 @@ export async function fetchOcha(opts: { refresh?: boolean } = {}): Promise<void>
           OBJECTID: id,
           first_damage_date: timeline.first,
           latest_damage_class: timeline.latest,
+          governorate,
+          progression: timeline.progression,
           Grouped_Damage_Classes: 1,
         },
       });

@@ -437,6 +437,53 @@ button { font-family: inherit; }
 #side-panel .sp-rating-contested { background: rgba(185, 28, 28, 0.12); color: var(--rating-contested); }
 #side-panel .sp-rating-confirmed { background: rgba(30, 64, 175, 0.12); color: var(--rating-confirmed); }
 
+/* Damage progression timeline */
+#side-panel .sp-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px 0;
+  position: relative;
+}
+#side-panel .sp-timeline::before {
+  content: '';
+  position: absolute;
+  left: 70px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--hairline-strong);
+}
+#side-panel .sp-timeline li {
+  display: grid;
+  grid-template-columns: 65px 12px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 12.5px;
+}
+#side-panel .sp-tl-date {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+#side-panel .sp-tl-marker {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px var(--hairline-strong);
+  justify-self: center;
+}
+#side-panel .sp-tl-destroyed { background: #8b1a1a; }
+#side-panel .sp-tl-severe { background: #d97706; }
+#side-panel .sp-tl-moderate { background: #eab308; }
+#side-panel .sp-tl-possibly_damaged { background: #9ca3af; }
+#side-panel .sp-tl-label {
+  font-weight: 500;
+  color: var(--ink-1);
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
    Layer toggle — compact chip-style
    ─────────────────────────────────────────────────────────────────────────── */

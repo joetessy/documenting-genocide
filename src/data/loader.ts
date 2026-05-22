@@ -5,11 +5,22 @@ export interface LoadedData {
   meta: BuildMeta;
 }
 
+export interface DamagePass {
+  date: string;
+  class: number;     // 1=destroyed 2=severe 3=moderate 4=possibly_damaged
+}
+
 export interface DamageFeature {
   type: 'Feature';
   id: string;
   geometry: { type: 'Point'; coordinates: [number, number] };
-  properties: { id: string; status: string; assessment_date: string };
+  properties: {
+    id: string;
+    status: string;
+    assessment_date: string;
+    governorate?: string;
+    progression?: DamagePass[];
+  };
 }
 
 export interface DamageData {

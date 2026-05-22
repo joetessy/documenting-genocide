@@ -130,14 +130,36 @@ async function main(): Promise<void> {
   const preWarDamageDropped = damageRecords.length - damageInConflict.length;
   console.log(`Filtered damage to ${CONFLICT_START}+: ${damageInConflict.length} (dropped ${preWarDamageDropped} pre-war assessments)`);
 
+  // Carry through the rich detail (governorate + progression) onto the slim
+  // public feature collection so the side panel can render a per-building
+  // report when a damage dot is clicked.
+  const rawDamageBySlug = new Map<string, { governorate: string; progression: Array<{ date: string; class: number }> }>();
+  for (const feat of ochaFeatures) {
+    const p = (feat.properties ?? {}) as Record<string, unknown>;
+    const id = `unosat-${p.OBJECTID}`;
+    rawDamageBySlug.set(id, {
+      governorate: typeof p.governorate === 'string' ? p.governorate : '',
+      progression: Array.isArray(p.progression) ? (p.progression as Array<{ date: string; class: number }>) : [],
+    });
+  }
+
   const damageFc: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
-    features: damageInConflict.map((d) => ({
-      type: 'Feature',
-      id: d.id,
-      geometry: { type: 'Point', coordinates: [d.location.lon, d.location.lat] },
-      properties: { id: d.id, status: d.status, assessment_date: d.assessment_date },
-    })),
+    features: damageInConflict.map((d) => {
+      const extra = rawDamageBySlug.get(d.id);
+      return {
+        type: 'Feature',
+        id: d.id,
+        geometry: { type: 'Point', coordinates: [d.location.lon, d.location.lat] },
+        properties: {
+          id: d.id,
+          status: d.status,
+          assessment_date: d.assessment_date,
+          governorate: extra?.governorate ?? '',
+          progression: extra?.progression ?? [],
+        },
+      };
+    }),
   };
   await writeFile(join(OUT_DIR, 'damage.geojson'), JSON.stringify(damageFc));
   console.log(`Wrote ${damageInConflict.length} damage records to ${OUT_DIR}/damage.geojson`);
