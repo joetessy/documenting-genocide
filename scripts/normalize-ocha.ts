@@ -28,16 +28,18 @@ export function parseSensorDate(v: unknown): string | null {
   return d.toISOString().slice(0, 10);
 }
 
+// Normalize a slim damage feature (the format produced by fetch-ocha.ts).
+// Expected properties: { OBJECTID, first_damage_date, latest_damage_class, Grouped_Damage_Classes }.
 export function normalizeOchaFeature(feat: GeoJSON.Feature): DamageRecord | null {
-  const p = feat.properties ?? {};
-  const grouped = (p as Record<string, unknown>).Grouped_Damage_Classes;
-  if (grouped !== 1) return null;  // only buildings
+  const p = (feat.properties ?? {}) as Record<string, unknown>;
+  const grouped = p.Grouped_Damage_Classes;
+  if (grouped !== 1) return null;
 
-  const cls = (p as Record<string, unknown>).Main_Damage_Site_Class_14;
+  const cls = p.latest_damage_class;
   const status = mapDamageClass(typeof cls === 'number' ? cls : null);
   if (!status) return null;
 
-  const id = (p as Record<string, unknown>).OBJECTID;
+  const id = p.OBJECTID;
   if (typeof id !== 'number') return null;
 
   if (feat.geometry?.type !== 'Point') return null;
@@ -45,14 +47,14 @@ export function normalizeOchaFeature(feat: GeoJSON.Feature): DamageRecord | null
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
   if (!isInGazaBbox(lat, lon)) return null;
 
-  const sensorDate = (p as Record<string, unknown>).SensorDate_14;
-  const assessment_date = parseSensorDate(sensorDate) ?? '';
+  const firstDate = p.first_damage_date;
+  if (typeof firstDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(firstDate)) return null;
 
   return {
     id: `unosat-${id}`,
     location: { lat, lon },
     status,
-    assessment_date,
+    assessment_date: firstDate,    // semantically: the FIRST time this building was assessed damaged
     source: { org: 'ocha', url: HDX_URL },
   };
 }

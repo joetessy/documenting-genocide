@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeOchaFeature, mapDamageClass, parseSensorDate } from '../scripts/normalize-ocha';
+import { extractDamageTimeline } from '../scripts/fetch-ocha';
 
 describe('mapDamageClass', () => {
   it('maps 1 to destroyed', () => expect(mapDamageClass(1)).toBe('destroyed'));
@@ -26,20 +27,59 @@ describe('parseSensorDate', () => {
   });
 });
 
-describe('normalizeOchaFeature', () => {
+describe('extractDamageTimeline', () => {
+  it('returns first damage date and latest damage code', () => {
+    // Building: pass 1 was undamaged (code 6), pass 2 became moderate (3), pass 3 became destroyed (1).
+    const props = {
+      SensorDate: 1683676800000,     // 2023-05-10 undamaged
+      Main_Damage_Site_Class: 6,
+      SensorDate_2: 1697500800000,   // 2023-10-17 — first damage
+      Main_Damage_Site_Class_2: 3,
+      SensorDate_3: 1728604800000,   // 2024-10-11 — final state
+      Main_Damage_Site_Class_3: 1,
+    };
+    const t = extractDamageTimeline(props as never)!;
+    expect(t.first).toBe('2023-10-17');
+    expect(t.latest).toBe(1);
+  });
+
+  it('returns null if the building was never damaged', () => {
+    const props = {
+      SensorDate: 1683676800000,
+      Main_Damage_Site_Class: 6,
+      SensorDate_2: 1697500800000,
+      Main_Damage_Site_Class_2: 6,
+    };
+    expect(extractDamageTimeline(props as never)).toBeNull();
+  });
+
+  it('orders passes by date, not by index', () => {
+    // Passes are stored out of chronological order; should pick by earliest date.
+    const props = {
+      SensorDate: 1728604800000,        // 2024-10-11 — listed first but later in time
+      Main_Damage_Site_Class: 1,
+      SensorDate_2: 1697500800000,      // 2023-10-17 — earlier
+      Main_Damage_Site_Class_2: 3,
+    };
+    const t = extractDamageTimeline(props as never)!;
+    expect(t.first).toBe('2023-10-17');
+    expect(t.latest).toBe(1);
+  });
+});
+
+describe('normalizeOchaFeature (slim format)', () => {
   const SAMPLE_FEATURE: GeoJSON.Feature = {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [34.4500, 31.5200] },
     properties: {
       OBJECTID: 12345,
-      Main_Damage_Site_Class_14: 1,
-      SensorDate_14: 1697500800000,
+      first_damage_date: '2023-10-17',
+      latest_damage_class: 1,
       Grouped_Damage_Classes: 1,
-      Governorate: 'Gaza',
     },
   };
 
-  it('produces a DamageRecord from a destroyed building feature', () => {
+  it('produces a DamageRecord from a slim feature', () => {
     const r = normalizeOchaFeature(SAMPLE_FEATURE)!;
     expect(r.id).toBe('unosat-12345');
     expect(r.location.lat).toBeCloseTo(31.52);
@@ -61,9 +101,17 @@ describe('normalizeOchaFeature', () => {
   it('rejects unmappable damage codes (5, 6, etc.)', () => {
     const noDamage = {
       ...SAMPLE_FEATURE,
-      properties: { ...SAMPLE_FEATURE.properties, Main_Damage_Site_Class_14: 6 },
+      properties: { ...SAMPLE_FEATURE.properties, latest_damage_class: 6 },
     };
     expect(normalizeOchaFeature(noDamage)).toBeNull();
+  });
+
+  it('rejects features missing first_damage_date', () => {
+    const noDate = {
+      ...SAMPLE_FEATURE,
+      properties: { ...SAMPLE_FEATURE.properties, first_damage_date: undefined },
+    };
+    expect(normalizeOchaFeature(noDate)).toBeNull();
   });
 
   it('rejects out-of-Gaza-bbox features', () => {
