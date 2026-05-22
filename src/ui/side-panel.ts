@@ -1,4 +1,4 @@
-import type { Incident, CredibilityRating } from '@shared/types';
+import type { Incident, CredibilityRating, SourceOrg } from '@shared/types';
 
 const RATING_LABELS: Record<CredibilityRating, string> = {
   fair: 'Fair',
@@ -7,15 +7,19 @@ const RATING_LABELS: Record<CredibilityRating, string> = {
   confirmed: 'Confirmed',
 };
 
+const ORG_LABEL: Record<SourceOrg, string> = {
+  airwars: 'Airwars',
+  acled: 'ACLED',
+  ocha: 'OCHA',
+  ucdp: 'UCDP',
+};
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
 }
 
-function formatCasualtyLine(killed: number | null, injured: number | null): string {
-  const parts: string[] = [];
-  if (killed !== null) parts.push(`${killed} killed`);
-  if (injured !== null) parts.push(`${injured} injured`);
-  return parts.length > 0 ? parts.join(' · ') : 'Casualty figures unavailable';
+function formatN(n: number | null): string {
+  return n === null ? '–' : new Intl.NumberFormat('en-US').format(n);
 }
 
 export interface SidePanelHandle {
@@ -26,64 +30,84 @@ export interface SidePanelHandle {
 export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
   const el = document.createElement('aside');
   el.id = 'side-panel';
-  el.style.cssText = [
-    'position: absolute',
-    'top: 16px',
-    'right: 16px',
-    'width: 360px',
-    'max-height: calc(100vh - 32px)',
-    'overflow-y: auto',
-    'background: rgba(255, 252, 245, 0.98)',
-    'border: 1px solid #8a7f6e',
-    'border-radius: 6px',
-    'padding: 20px',
-    'font-size: 14px',
-    'color: #3a3530',
-    'box-shadow: 0 4px 16px rgba(0,0,0,0.15)',
-    'transform: translateX(calc(100% + 24px))',
-    'transition: transform 200ms ease',
-    'z-index: 9',
-  ].join(';');
   parent.appendChild(el);
 
+  function render(incident: Incident): void {
+    const dateLabel = new Date(`${incident.date}T00:00:00Z`).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+    const govLabel = incident.location.governorate
+      ? incident.location.governorate.replace(/_/g, ' ')
+      : null;
+
+    const killed = incident.casualties.killed;
+    const injured = incident.casualties.injured;
+    const children = incident.casualties.killed_children;
+    const women = incident.casualties.killed_women;
+
+    const sourcesHtml = incident.sources
+      .map((s) => {
+        const rating = s.rating
+          ? `<span class="sp-rating sp-rating-${s.rating}">${RATING_LABELS[s.rating]}</span>`
+          : '';
+        return `<div class="sp-source">
+          <span class="sp-source-org">${ORG_LABEL[s.org] ?? s.org.toUpperCase()}</span>
+          <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.id)}</a>
+          ${rating}
+        </div>`;
+      })
+      .join('');
+
+    const demoBits: string[] = [];
+    if (children !== null && children > 0) demoBits.push(`${children} ${children === 1 ? 'child' : 'children'}`);
+    if (women !== null && women > 0) demoBits.push(`${women} ${women === 1 ? 'woman' : 'women'}`);
+
+    el.innerHTML = `
+      <button class="sp-close" aria-label="Close panel">✕</button>
+      <div class="sp-body">
+        <div class="sp-cat">${escapeHtml(incident.category.replace(/_/g, ' '))}</div>
+        <h2 class="sp-title">${escapeHtml(incident.location.name ?? 'Incident')}</h2>
+        <div class="sp-meta">${dateLabel}${govLabel ? ' &middot; ' + escapeHtml(govLabel) : ''}</div>
+
+        <div class="sp-casualties">
+          <div class="sp-casualty">
+            <div class="sp-casualty-n is-killed">${formatN(killed)}</div>
+            <div class="sp-casualty-label">Killed</div>
+          </div>
+          <div class="sp-casualty">
+            <div class="sp-casualty-n">${formatN(injured)}</div>
+            <div class="sp-casualty-label">Injured</div>
+          </div>
+        </div>
+
+        ${demoBits.length > 0
+          ? `<div class="sp-demo">Including ${demoBits.join(' and ')}.</div>`
+          : ''}
+
+        <div class="sp-desc">
+          ${incident.description
+            .map((p) => `<p>${escapeHtml(p)}</p>`)
+            .join('')}
+        </div>
+
+        <div class="sp-sources-label">Sources (${incident.sources.length})</div>
+        <div class="sp-sources">${sourcesHtml}</div>
+      </div>
+    `;
+    el.classList.add('is-open');
+    el.scrollTop = 0;
+
+    const closeBtn = el.querySelector('.sp-close');
+    closeBtn?.addEventListener('click', () => el.classList.remove('is-open'));
+  }
+
   return {
-    open(incident) {
-      const subBits: string[] = [incident.date];
-      if (incident.location.governorate) subBits.push(incident.location.governorate.replace(/_/g, ' '));
-
-      const sourcesHtml = incident.sources
-        .map((s) => {
-          const rating = s.rating ? ` <span style="color:#6e6660">(rated: ${RATING_LABELS[s.rating]})</span>` : '';
-          const label = s.org === 'airwars' ? `Airwars ${escapeHtml(s.id)}` : `${s.org.toUpperCase()} ${escapeHtml(s.id)}`;
-          return `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" style="color:#3a3530">${label}</a>${rating}</li>`;
-        })
-        .join('');
-
-      const children = incident.casualties.killed_children;
-      const women = incident.casualties.killed_women;
-      const demoLine: string[] = [];
-      if (children !== null) demoLine.push(`${children} ${children === 1 ? 'child' : 'children'}`);
-      if (women !== null) demoLine.push(`${women} ${women === 1 ? 'woman' : 'women'}`);
-
-      el.innerHTML = `
-        <button id="side-panel-close" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#6e6660">×</button>
-        <div style="text-transform:uppercase;letter-spacing:0.05em;font-size:11px;color:#6e6660;margin-bottom:4px">${escapeHtml(incident.category.replace(/_/g, ' '))}</div>
-        <h2 style="margin:0 0 4px 0;font-size:18px;font-weight:600">${escapeHtml(incident.location.name ?? 'Incident')}</h2>
-        <div style="color:#6e6660;font-size:13px;margin-bottom:16px">${subBits.join(' · ')}</div>
-        <div style="margin-bottom:16px;font-size:15px;font-weight:500">${formatCasualtyLine(incident.casualties.killed, incident.casualties.injured)}</div>
-        ${demoLine.length > 0 ? `<div style="margin-bottom:16px;font-size:13px;color:#6e6660">Including ${demoLine.join(', ')}</div>` : ''}
-        <div style="margin-bottom:16px;line-height:1.5">${incident.description.map((p) => `<p style="margin:0 0 8px 0">${escapeHtml(p)}</p>`).join('')}</div>
-        <div style="text-transform:uppercase;letter-spacing:0.05em;font-size:11px;color:#6e6660;margin-bottom:6px">Sources (${incident.sources.length})</div>
-        <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.6">${sourcesHtml}</ul>
-      `;
-      el.style.transform = 'translateX(0)';
-      const closeBtn = document.getElementById('side-panel-close');
-      closeBtn?.addEventListener('click', () => {
-        el.style.transform = 'translateX(calc(100% + 24px))';
-      });
-    },
+    open: render,
     close() {
-      el.style.transform = 'translateX(calc(100% + 24px))';
+      el.classList.remove('is-open');
     },
   };
 }
