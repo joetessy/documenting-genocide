@@ -85,8 +85,15 @@ async function main(): Promise<void> {
   console.log(`Normalized ${airwarsIncidents.length} Airwars + ${ucdpIncidents.length} UCDP incidents`);
   console.log(`  Unplotted: ${airwarsUnplotted} Airwars, ${ucdpUnplotted} UCDP`);
 
-  const { incidents, merges } = dedupeIncidents([...airwarsIncidents, ...ucdpIncidents]);
-  console.log(`Dedup: ${airwarsIncidents.length + ucdpIncidents.length} → ${incidents.length} (${merges} merges)`);
+  const { incidents: dedupedIncidents, merges } = dedupeIncidents([...airwarsIncidents, ...ucdpIncidents]);
+  console.log(`Dedup: ${airwarsIncidents.length + ucdpIncidents.length} → ${dedupedIncidents.length} (${merges} merges)`);
+
+  // Clip to the start of the war. Pre-Oct-7-2023 records are pre-war and
+  // shouldn't appear in the exhibit's timeline. Keeps the bundle smaller too.
+  const CONFLICT_START = '2023-10-07';
+  const incidents = dedupedIncidents.filter((i) => i.date >= CONFLICT_START);
+  const preWarDropped = dedupedIncidents.length - incidents.length;
+  console.log(`Filtered to ${CONFLICT_START}+: ${incidents.length} (dropped ${preWarDropped} pre-war records)`);
 
   incidents.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -116,9 +123,16 @@ async function main(): Promise<void> {
   console.log(`Normalized ${damageRecords.length} damage records (${ochaRejected} rejected as non-buildings/out-of-bbox)`);
   console.log(`  Damage distribution: destroyed=${statusCounts.destroyed}, severe=${statusCounts.severe}, moderate=${statusCounts.moderate}, possibly_damaged=${statusCounts.possibly_damaged}`);
 
+  // Same conflict-start clip for damage records — buildings first damaged
+  // before Oct 7 2023 are pre-war baselines that shouldn't appear in the
+  // war exhibit's timeline.
+  const damageInConflict = damageRecords.filter((d) => d.assessment_date >= CONFLICT_START);
+  const preWarDamageDropped = damageRecords.length - damageInConflict.length;
+  console.log(`Filtered damage to ${CONFLICT_START}+: ${damageInConflict.length} (dropped ${preWarDamageDropped} pre-war assessments)`);
+
   const damageFc: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
-    features: damageRecords.map((d) => ({
+    features: damageInConflict.map((d) => ({
       type: 'Feature',
       id: d.id,
       geometry: { type: 'Point', coordinates: [d.location.lon, d.location.lat] },
@@ -126,14 +140,14 @@ async function main(): Promise<void> {
     })),
   };
   await writeFile(join(OUT_DIR, 'damage.geojson'), JSON.stringify(damageFc));
-  console.log(`Wrote ${damageRecords.length} damage records to ${OUT_DIR}/damage.geojson`);
+  console.log(`Wrote ${damageInConflict.length} damage records to ${OUT_DIR}/damage.geojson`);
 
   const meta: BuildMeta = {
     build_date: new Date().toISOString(),
     source_counts: { airwars: airwarsIncidents.length, ucdp: ucdpIncidents.length },
     dedup_merges: merges,
     unplotted_count: airwarsUnplotted + ucdpUnplotted,
-    damage_count: damageRecords.length,
+    damage_count: damageInConflict.length,
   };
   await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
 
