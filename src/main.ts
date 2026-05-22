@@ -2,10 +2,10 @@ import './style.css';
 import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
-import { loadIncidents } from './data/loader';
+import { loadIncidents, loadDamage } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
-import { bucketByDay, renderHistogram } from './time/histogram';
+import { bucketByDay, bucketDamageByDay, renderHistogram } from './time/histogram';
 import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
 import { mountLoading } from './ui/loading';
@@ -30,15 +30,19 @@ async function start(): Promise<void> {
   const { incidents, meta } = await loadIncidents();
   console.log(`Loaded ${incidents.length} incidents (${meta.unplotted_count} unplotted), build ${meta.build_date}`);
 
-  mountHeader(app, { meta, incidentCount: incidents.length });
+  loading.setStatus('Loading damage assessment…');
+  const damageData = await loadDamage();
+  console.log(`Loaded ${damageData.features.length} damage features`);
+
+  const header = mountHeader(app, { incidents, damageFeatures: damageData.features });
 
   const markers = mountMarkers(map, incidents);
   const tooltip = mountTooltip(app);
   const sidePanel = mountSidePanel(app);
   const byId = new Map(incidents.map((i) => [i.id, i]));
 
-  const damage = await mountDamageLayer(map, '/data/damage.geojson');
-  damage.setVisible(true);                      // default ON; toggle in layer-toggle reflects this
+  const damage = await mountDamageLayer(map, damageData as unknown as GeoJSON.FeatureCollection);
+  damage.setVisible(true);
   const layerToggle = mountLayerToggle(app);
   layerToggle.onChange((s) => {
     damage.setVisible(s.damage);
@@ -61,6 +65,7 @@ async function start(): Promise<void> {
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
     damage.setVisibleDate(date);
+    header.updateForDate(date);
     const newHash = formatHash({ date });
     if (newHash !== location.hash) {
       history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
@@ -68,11 +73,14 @@ async function start(): Promise<void> {
   });
   markers.setVisibleDate(timeCtrl.currentDate);
   damage.setVisibleDate(timeCtrl.currentDate);
+  header.updateForDate(timeCtrl.currentDate);
 
   const histogramHost = mountScrubber(app, timeCtrl);
-  const buckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
-  requestAnimationFrame(() => renderHistogram(histogramHost, buckets));
-  window.addEventListener('resize', () => renderHistogram(histogramHost, buckets));
+  const incidentBuckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
+  const damageBuckets = bucketDamageByDay(damageData.features, timeCtrl.start, timeCtrl.end);
+  const drawHistogram = (): void => renderHistogram(histogramHost, incidentBuckets, damageBuckets);
+  requestAnimationFrame(drawHistogram);
+  window.addEventListener('resize', drawHistogram);
 
   map.on('mousemove', 'incidents-circles', (e) => {
     if (!e.features || e.features.length === 0) return;
@@ -110,8 +118,7 @@ async function start(): Promise<void> {
   // is parsed and visible tiles are requested) rather than 'idle' — 'idle' may
   // never fire if any tile request errors.
   map.once('load', () => loading.destroy());
-  // Safety fallback: hide loading after 8s no matter what, so a tile outage
-  // doesn't leave the user staring at a blank screen.
+  // Safety fallback: hide loading after 8s no matter what.
   setTimeout(() => loading.destroy(), 8000);
 }
 

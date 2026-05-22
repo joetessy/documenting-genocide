@@ -1,7 +1,19 @@
 import type { Incident, Casualties, SourceAttribution } from '../shared/types';
 
+// 0.0005° latitude ≈ 55m, 0.0005° longitude ≈ 47m at Gaza's latitude.
+// Tighter than the original 0.001° (110m) which merged ~30% of records — too
+// aggressive. With ~55m precision we surface more individually-documented
+// incidents while still catching same-strike duplicates between sources.
+const PRECISION = 0.0005;
+
+function round(n: number, step: number): number {
+  return Math.round(n / step) * step;
+}
+
 export function groupKey(date: string, lat: number, lon: number): string {
-  return `${date}:${lat.toFixed(3)}:${lon.toFixed(3)}`;
+  const latR = round(lat, PRECISION).toFixed(4);
+  const lonR = round(lon, PRECISION).toFixed(4);
+  return `${date}:${latR}:${lonR}`;
 }
 
 function descriptionLength(desc: string[]): number {

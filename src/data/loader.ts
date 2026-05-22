@@ -5,6 +5,18 @@ export interface LoadedData {
   meta: BuildMeta;
 }
 
+export interface DamageFeature {
+  type: 'Feature';
+  id: string;
+  geometry: { type: 'Point'; coordinates: [number, number] };
+  properties: { id: string; status: string; assessment_date: string };
+}
+
+export interface DamageData {
+  type: 'FeatureCollection';
+  features: DamageFeature[];
+}
+
 export async function loadIncidents(): Promise<LoadedData> {
   const [incidentsRes, metaRes] = await Promise.all([
     fetch('/data/incidents.json'),
@@ -15,4 +27,10 @@ export async function loadIncidents(): Promise<LoadedData> {
   const incidents = (await incidentsRes.json()) as Incident[];
   const meta = (await metaRes.json()) as BuildMeta;
   return { incidents, meta };
+}
+
+export async function loadDamage(): Promise<DamageData> {
+  const res = await fetch('/data/damage.geojson');
+  if (!res.ok) throw new Error(`Failed to load damage.geojson: ${res.status}`);
+  return (await res.json()) as DamageData;
 }
