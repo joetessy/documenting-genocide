@@ -15,7 +15,10 @@ export interface DamageLayerHandle {
   setVisibleDate(date: string): void;  // ISO YYYY-MM-DD; only buildings damaged on/before this date render
 }
 
-export async function mountDamageLayer(map: Map, dataUrl: string): Promise<DamageLayerHandle> {
+export async function mountDamageLayer(
+  map: Map,
+  data: GeoJSON.FeatureCollection | string,
+): Promise<DamageLayerHandle> {
   let pendingDate: string | null = null;
   let pendingVisible = false;
   let layerReady = false;
@@ -33,7 +36,7 @@ export async function mountDamageLayer(map: Map, dataUrl: string): Promise<Damag
   }
 
   const addLayer = (): void => {
-    map.addSource(SOURCE_ID, { type: 'geojson', data: dataUrl });
+    map.addSource(SOURCE_ID, { type: 'geojson', data });
     map.addLayer(
       {
         id: LAYER_ID,

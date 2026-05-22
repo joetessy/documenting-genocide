@@ -16,16 +16,17 @@ function makeIncident(overrides: Partial<Incident> & { id: string }): Incident {
 
 describe('groupKey', () => {
   it('rounds lat/lon to 3 decimal places', () => {
-    expect(groupKey('2023-10-15', 31.50189, 34.46591)).toBe('2023-10-15:31.502:34.466');
+    expect(groupKey('2023-10-15', 31.50189, 34.46591)).toBe('2023-10-15:31.5020:34.4660');
   });
-  it('returns the same key for points within ~110m', () => {
-    const k1 = groupKey('2023-10-15', 31.5018, 34.466);
-    const k2 = groupKey('2023-10-15', 31.5020, 34.4664);
+  it('returns the same key for points within ~55m', () => {
+    // 0.0001° lat = ~11m at Gaza latitude. 0.0001° lon = ~9m.
+    const k1 = groupKey('2023-10-15', 31.5018, 34.4660);
+    const k2 = groupKey('2023-10-15', 31.5020, 34.4661);
     expect(k1).toBe(k2);
   });
-  it('returns different keys for points >110m apart', () => {
-    const k1 = groupKey('2023-10-15', 31.5018, 34.466);
-    const k2 = groupKey('2023-10-15', 31.5050, 34.466);
+  it('returns different keys for points >55m apart', () => {
+    const k1 = groupKey('2023-10-15', 31.5018, 34.4660);
+    const k2 = groupKey('2023-10-15', 31.5050, 34.4660);
     expect(k1).not.toBe(k2);
   });
   it('returns different keys for different dates', () => {

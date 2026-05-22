@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bucketByDay } from '../src/time/histogram';
+import { bucketByDay, bucketDamageByDay } from '../src/time/histogram';
 import type { Incident } from '../shared/types';
 
 function makeIncident(date: string, id: string): Incident {
@@ -39,5 +39,27 @@ describe('bucketByDay', () => {
     ];
     const buckets = bucketByDay(incidents, '2023-10-07', '2023-10-10');
     expect(buckets).toEqual([0, 1, 0, 0]);
+  });
+});
+
+describe('bucketDamageByDay', () => {
+  it('counts features by their assessment_date property', () => {
+    const features = [
+      { properties: { assessment_date: '2023-10-07' } },
+      { properties: { assessment_date: '2023-10-07' } },
+      { properties: { assessment_date: '2023-10-09' } },
+    ];
+    const buckets = bucketDamageByDay(features, '2023-10-07', '2023-10-10');
+    expect(buckets).toEqual([2, 0, 1, 0]);
+  });
+
+  it('ignores features without an assessment_date', () => {
+    const features = [
+      { properties: { assessment_date: '2023-10-08' } },
+      { properties: {} },
+      { properties: { assessment_date: undefined } },
+    ];
+    const buckets = bucketDamageByDay(features, '2023-10-07', '2023-10-09');
+    expect(buckets).toEqual([0, 1, 0]);
   });
 });
