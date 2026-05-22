@@ -38,6 +38,7 @@ async function start(): Promise<void> {
   const byId = new Map(incidents.map((i) => [i.id, i]));
 
   const damage = await mountDamageLayer(map, '/data/damage.geojson');
+  damage.setVisible(true);                      // default ON; toggle in layer-toggle reflects this
   const layerToggle = mountLayerToggle(app);
   layerToggle.onChange((s) => {
     damage.setVisible(s.damage);
@@ -59,12 +60,14 @@ async function start(): Promise<void> {
 
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
+    damage.setVisibleDate(date);
     const newHash = formatHash({ date });
     if (newHash !== location.hash) {
       history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
     }
   });
   markers.setVisibleDate(timeCtrl.currentDate);
+  damage.setVisibleDate(timeCtrl.currentDate);
 
   const histogramHost = mountScrubber(app, timeCtrl);
   const buckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
