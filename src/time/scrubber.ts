@@ -60,10 +60,22 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
     }
   }
 
-  // Drag track → controller.
+  // Drag track → controller, batched to once per animation frame.
+  // Without rAF batching, an `input` event during drag can fire 60-120 times
+  // per second, asking MapLibre to re-filter the 196K-feature damage layer on
+  // every event. The visible result is choppy filling and missed frames.
+  // With batching, we only act on the LAST value within a frame.
+  let rafPending = false;
+  let latestValue = track.value;
   track.addEventListener('input', () => {
-    const date = addDays(ctrl.start, Number(track.value));
-    ctrl.setDate(date);
+    latestValue = track.value;
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      const date = addDays(ctrl.start, Number(latestValue));
+      ctrl.setDate(date);
+    });
   });
 
   playBtn.addEventListener('click', () => {

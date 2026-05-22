@@ -38,13 +38,22 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
   let pendingHoveredId: string | null = null;
   let layerReady = false;
 
+  let rafScheduled = false;
   function applyPending(): void {
-    if (pendingDate !== null && map.getLayer(LAYER_ID)) {
-      map.setFilter(LAYER_ID, ['<=', ['get', 'date'], pendingDate]);
-    }
-    if (map.getLayer(HOVERED_ID)) {
-      map.setFilter(HOVERED_ID, ['==', ['get', 'id'], pendingHoveredId ?? '']);
-    }
+    // Coalesce multiple setVisibleDate / setHoveredId calls within the same
+    // animation frame into a single setFilter pair. The damage layer benefits
+    // even more from this since its layer has 196K features.
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(() => {
+      rafScheduled = false;
+      if (pendingDate !== null && map.getLayer(LAYER_ID)) {
+        map.setFilter(LAYER_ID, ['<=', ['get', 'date'], pendingDate]);
+      }
+      if (map.getLayer(HOVERED_ID)) {
+        map.setFilter(HOVERED_ID, ['==', ['get', 'id'], pendingHoveredId ?? '']);
+      }
+    });
   }
 
   function addSourcesAndLayers(): void {

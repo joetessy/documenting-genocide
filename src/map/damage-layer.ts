@@ -12,7 +12,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export interface DamageLayerHandle {
   setVisible(visible: boolean): void;
-  setVisibleDate(date: string): void;  // ISO YYYY-MM-DD; only buildings damaged on/before this date render
+  setVisibleDate(date: string): void;
 }
 
 export async function mountDamageLayer(
@@ -24,15 +24,21 @@ export async function mountDamageLayer(
   let layerReady = false;
 
   function buildFilter(date: string | null): maplibregl.FilterSpecification {
-    // properties.assessment_date holds the FIRST damage date for each building.
-    // Show only buildings whose first-damage date is on or before the current scrubber date.
     return ['<=', ['get', 'assessment_date'], date ?? '1900-01-01'] as unknown as maplibregl.FilterSpecification;
   }
 
+  let rafScheduled = false;
   function applyState(): void {
-    if (!map.getLayer(LAYER_ID)) return;
-    map.setLayoutProperty(LAYER_ID, 'visibility', pendingVisible ? 'visible' : 'none');
-    map.setFilter(LAYER_ID, buildFilter(pendingDate));
+    // Coalesce filter+visibility updates across a frame. 196K features means
+    // every setFilter is expensive — never call it more than once per paint.
+    if (rafScheduled) return;
+    rafScheduled = true;
+    requestAnimationFrame(() => {
+      rafScheduled = false;
+      if (!map.getLayer(LAYER_ID)) return;
+      map.setLayoutProperty(LAYER_ID, 'visibility', pendingVisible ? 'visible' : 'none');
+      map.setFilter(LAYER_ID, buildFilter(pendingDate));
+    });
   }
 
   const addLayer = (): void => {
@@ -45,7 +51,18 @@ export async function mountDamageLayer(
         layout: { visibility: pendingVisible ? 'visible' : 'none' },
         filter: buildFilter(pendingDate),
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 0.4, 14, 1.5, 17, 3.5],
+          // Larger radii (above 1px at every zoom) so the GPU doesn't antialias
+          // dots into nothing — that was the cause of the "in and out at random"
+          // flicker the user saw at default zoom.
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            9, 1.4,
+            11, 1.9,
+            13, 2.6,
+            14, 3.4,
+            17, 5.5,
+          ],
+          'circle-blur': 0.35,        // soft watercolor edge — overlapping dots blend
           'circle-color': [
             'match',
             ['get', 'status'],
@@ -58,9 +75,11 @@ export async function mountDamageLayer(
           'circle-opacity': 0.7,
         },
       },
-      // Insert below the incident layer so incident markers render on top.
       'incidents-circles',
     );
+    // Apply opacity transition via setPaintProperty (the TS types reject
+    // transition keys inside the initial paint block, but the runtime accepts).
+    map.setPaintProperty(LAYER_ID, 'circle-opacity-transition' as never, { duration: 400 } as never);
     layerReady = true;
   };
 
