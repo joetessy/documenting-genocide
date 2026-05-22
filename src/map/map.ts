@@ -1,5 +1,6 @@
 import maplibregl, { Map } from 'maplibre-gl';
-import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
+import { gazaStyle } from './style';
+import { GAZA_MASK_POLYGON } from './gaza-boundary';
 
 // Generous navigation bounds. The cream mask hides everything outside Gaza
 // visually, so the user can rotate/tilt/pan freely without ever seeing Israel
@@ -12,32 +13,28 @@ const NAV_BOUNDS: [[number, number], [number, number]] = [
 
 const GAZA_CENTER: [number, number] = [34.40, 31.45];
 
-// OpenFreeMap "liberty" — free vector tiles, no API key. Includes a
-// `building-3d` fill-extrusion layer on the `openmaptiles` source by default.
-const BASE_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
-
-// Cream (same as our palette `land`), used to mask everything outside Gaza.
+// Cream (same as our palette `paper`), used to mask everything outside Gaza.
 const MASK_COLOR = '#f4ede0';
 
 export function mountMap(container: HTMLElement): Map {
   const map = new maplibregl.Map({
     container,
-    style: BASE_STYLE_URL,
+    style: gazaStyle(),
     center: GAZA_CENTER,
-    zoom: 10.5,
-    pitch: 45,           // generous tilt so 3D buildings register on first load
-    bearing: 0,
+    zoom: 11,
+    pitch: 50,           // generous tilt so 3D buildings register on first load
+    bearing: -15,        // slight angle for a less head-on, more inhabited feel
     maxBounds: NAV_BOUNDS,
     minZoom: 9,
-    maxZoom: 17,
-    maxPitch: 70,
+    maxZoom: 18,
+    maxPitch: 75,
   });
 
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
   map.on('load', () => {
     addGazaMask(map);
-    softenBasemap(map);
   });
 
   return map;
@@ -45,81 +42,41 @@ export function mountMap(container: HTMLElement): Map {
 
 // Inverse polygon: outer rectangle covers the eastern Mediterranean region,
 // inner ring is Gaza's outline. The fill covers everywhere OUTSIDE Gaza in
-// cream — so the only basemap visible is inside the strip.
-//
-// We add this on top of the OpenFreeMap style layers (no beforeId) but the
-// incident/damage layers added later by main.ts go on top of this, which is
-// what we want: mask covers basemap, markers render above.
+// cream — so the only basemap visible is inside the strip. The cream covers
+// flat ground content (roads, water, parks); buildings poking up via 3D
+// extrusion past the Gaza boundary remain visible from the side, which we
+// accept as an acceptable visual compromise (the user is centred on Gaza).
 function addGazaMask(map: Map): void {
   map.addSource('gaza-mask', {
     type: 'geojson',
     data: { type: 'Feature', properties: {}, geometry: GAZA_MASK_POLYGON },
   });
-  map.addLayer({
-    id: 'gaza-mask-fill',
-    type: 'fill',
-    source: 'gaza-mask',
-    paint: {
-      'fill-color': MASK_COLOR,
-      'fill-opacity': 1,
+  // Insert the mask just BEFORE the buildings-flat layer so that:
+  //   - all the ground content (water, roads, landcover) outside Gaza is masked
+  //   - buildings inside Gaza still draw on top (visible)
+  // If the buildings-flat layer isn't present yet, fall back to default (top).
+  const beforeId = map.getLayer('buildings-flat') ? 'buildings-flat' : undefined;
+  map.addLayer(
+    {
+      id: 'gaza-mask-fill',
+      type: 'fill',
+      source: 'gaza-mask',
+      paint: {
+        'fill-color': MASK_COLOR,
+        'fill-opacity': 1,
+      },
     },
-  });
-  // Subtle outline along the Gaza boundary for definition.
+    beforeId,
+  );
+  // Subtle boundary line along Gaza's edge. Rendered on top of mask + buildings.
   map.addLayer({
     id: 'gaza-boundary-line',
     type: 'line',
     source: 'gaza-mask',
     paint: {
       'line-color': '#8a7f6e',
-      'line-width': 1.2,
-      'line-opacity': 0.65,
+      'line-width': 1.4,
+      'line-opacity': 0.7,
     },
   });
-}
-
-// OpenFreeMap liberty's stock palette is colorful; mute the most prominent
-// surface layers so the red incident markers stay the visual focal point.
-function softenBasemap(map: Map): void {
-  // Re-tint the background to our cream so any gaps don't flash bright.
-  if (map.getLayer('background')) {
-    try {
-      map.setPaintProperty('background', 'background-color', MASK_COLOR);
-    } catch {
-      /* ignore */
-    }
-  }
-  // Drop saturation on prominent fill layers if they exist.
-  const softFills = ['park', 'landcover_wood', 'landcover_grass', 'landuse_residential', 'landuse_pitch'];
-  for (const id of softFills) {
-    if (map.getLayer(id)) {
-      try {
-        map.setPaintProperty(id, 'fill-opacity', 0.45);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-  // Tint buildings into the cartographic palette AND constrain them to inside Gaza.
-  // A 2D mask polygon doesn't occlude 3D-extruded buildings (which rise above the
-  // flat mask plane), so we filter the layer to only render features WITHIN the
-  // Gaza outline polygon.
-  const gazaPolygon: GeoJSON.Polygon = { type: 'Polygon', coordinates: [GAZA_OUTLINE] };
-  const withinGaza: maplibregl.FilterSpecification = ['within', gazaPolygon];
-  if (map.getLayer('building-3d')) {
-    try {
-      map.setPaintProperty('building-3d', 'fill-extrusion-color', '#d4c2a0');
-      map.setPaintProperty('building-3d', 'fill-extrusion-opacity', 0.9);
-      map.setFilter('building-3d', withinGaza);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (map.getLayer('building')) {
-    try {
-      map.setPaintProperty('building', 'fill-color', '#dcc8a0');
-      map.setFilter('building', withinGaza);
-    } catch {
-      /* ignore */
-    }
-  }
 }
