@@ -6,38 +6,23 @@ function daysBetween(start: string, end: string): number {
   return Math.round((e - s) / 86_400_000);
 }
 
+const ICON_PLAY = '▶';
+const ICON_PAUSE = '❚❚';
+
 export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLElement {
   const container = document.createElement('div');
   container.id = 'scrubber';
-  container.style.cssText = [
-    'position: absolute',
-    'bottom: 16px',
-    'left: 50%',
-    'transform: translateX(-50%)',
-    'width: min(900px, calc(100vw - 32px))',
-    'background: rgba(255, 252, 245, 0.97)',
-    'border: 1px solid #8a7f6e',
-    'border-radius: 6px',
-    'padding: 14px 18px',
-    'display: grid',
-    'grid-template-columns: auto 1fr auto',
-    'gap: 16px',
-    'align-items: center',
-    'z-index: 8',
-    'box-shadow: 0 2px 8px rgba(0,0,0,0.1)',
-  ].join(';');
 
   const playBtn = document.createElement('button');
-  playBtn.textContent = '▶';
-  playBtn.style.cssText = 'background:none;border:1px solid #8a7f6e;color:#3a3530;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px';
+  playBtn.className = 'play-btn';
+  playBtn.textContent = ICON_PLAY;
   playBtn.setAttribute('aria-label', 'Play timeline');
 
   const trackWrap = document.createElement('div');
-  trackWrap.style.cssText = 'position: relative; height: 32px';
+  trackWrap.className = 'track-wrap';
 
   const histogramHost = document.createElement('div');
   histogramHost.id = 'histogram-host';
-  histogramHost.style.cssText = 'position:absolute;inset:0;pointer-events:none';
   trackWrap.appendChild(histogramHost);
 
   const track = document.createElement('input');
@@ -45,21 +30,37 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
   track.min = '0';
   track.max = String(daysBetween(ctrl.start, ctrl.end));
   track.value = String(daysBetween(ctrl.start, ctrl.currentDate));
-  track.style.cssText = 'width:100%;position:relative;z-index:2;cursor:pointer;accent-color:#e63946';
   track.setAttribute('aria-label', 'Date scrubber');
   trackWrap.appendChild(track);
 
+  const labelWrap = document.createElement('div');
   const label = document.createElement('div');
-  label.id = 'scrubber-label';
-  label.style.cssText = 'font-size:13px;font-weight:500;color:#3a3530;min-width:120px;text-align:right;font-variant-numeric:tabular-nums';
+  label.className = 'date-label';
   label.textContent = formatDate(ctrl.currentDate);
+  const labelSub = document.createElement('div');
+  labelSub.className = 'date-sub';
+  labelSub.textContent = 'CURRENT DATE';
+  labelWrap.appendChild(label);
+  labelWrap.appendChild(labelSub);
 
   container.appendChild(playBtn);
   container.appendChild(trackWrap);
-  container.appendChild(label);
+  container.appendChild(labelWrap);
   parent.appendChild(container);
 
-  // Wire interactions.
+  function updatePlayBtn(): void {
+    if (ctrl.isPlaying) {
+      playBtn.textContent = ICON_PAUSE;
+      playBtn.classList.add('is-playing');
+      playBtn.setAttribute('aria-label', 'Pause timeline');
+    } else {
+      playBtn.textContent = ICON_PLAY;
+      playBtn.classList.remove('is-playing');
+      playBtn.setAttribute('aria-label', 'Play timeline');
+    }
+  }
+
+  // Drag track → controller.
   track.addEventListener('input', () => {
     const date = addDays(ctrl.start, Number(track.value));
     ctrl.setDate(date);
@@ -67,24 +68,23 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
 
   playBtn.addEventListener('click', () => {
     ctrl.togglePlay();
-    playBtn.textContent = ctrl.isPlaying ? '⏸' : '▶';
+    updatePlayBtn();
   });
 
-  // Keep the UI in sync if anything else changes the date (URL, keyboard).
+  // Mirror controller state into UI on every change.
   ctrl.onChange((date) => {
     track.value = String(daysBetween(ctrl.start, date));
     label.textContent = formatDate(date);
-    if (!ctrl.isPlaying) playBtn.textContent = '▶';
+    if (!ctrl.isPlaying) updatePlayBtn();
   });
 
-  // Keyboard shortcuts.
   document.addEventListener('keydown', (e) => {
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.key === ' ') {
       e.preventDefault();
       ctrl.togglePlay();
-      playBtn.textContent = ctrl.isPlaying ? '⏸' : '▶';
+      updatePlayBtn();
     } else if (e.key === 'ArrowLeft') {
       ctrl.step(e.shiftKey ? -7 : -1);
     } else if (e.key === 'ArrowRight') {

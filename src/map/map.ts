@@ -1,19 +1,19 @@
 import maplibregl, { Map } from 'maplibre-gl';
 import { gazaStyle } from './style';
-import { GAZA_MASK_POLYGON } from './gaza-boundary';
+import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
 
-// Generous navigation bounds. The cream mask hides everything outside Gaza
-// visually, so the user can rotate/tilt/pan freely without ever seeing Israel
-// or Egypt. These bounds just prevent dragging the camera into the open
-// Mediterranean or somewhere far away on accident.
+// Tighter navigation bounds. The cream wall+mask combination hides everything
+// outside Gaza, but we also keep the camera centered so the user can't lose
+// the strip out of frame.
 const NAV_BOUNDS: [[number, number], [number, number]] = [
-  [33.5, 30.5],
-  [35.5, 32.5],
+  [34.15, 31.15],
+  [34.65, 31.65],
 ];
 
-const GAZA_CENTER: [number, number] = [34.40, 31.45];
+const GAZA_CENTER: [number, number] = [34.40, 31.42];
 
-// Cream (same as our palette `paper`), used to mask everything outside Gaza.
+// Cream color (same as our palette `paper`) for both the flat mask + the 3D
+// "containment wall" that occludes anything outside Gaza when tilted.
 const MASK_COLOR = '#f4ede0';
 
 export function mountMap(container: HTMLElement): Map {
@@ -22,61 +22,106 @@ export function mountMap(container: HTMLElement): Map {
     style: gazaStyle(),
     center: GAZA_CENTER,
     zoom: 11,
-    pitch: 50,           // generous tilt so 3D buildings register on first load
-    bearing: -15,        // slight angle for a less head-on, more inhabited feel
+    pitch: 50,
+    bearing: -15,
     maxBounds: NAV_BOUNDS,
-    minZoom: 9,
+    minZoom: 10,
     maxZoom: 18,
     maxPitch: 75,
+    attributionControl: false,
   });
 
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+  map.addControl(
+    new maplibregl.AttributionControl({
+      compact: true,
+      customAttribution:
+        '<a href="https://airwars.org">Airwars</a> &middot; ' +
+        '<a href="https://ucdp.uu.se">UCDP</a> &middot; ' +
+        '<a href="https://data.humdata.org">OCHA UNOSAT</a>',
+    }),
+    'bottom-right',
+  );
 
   map.on('load', () => {
     addGazaMask(map);
+    filterLabelsToGaza(map);
   });
 
   return map;
 }
 
-// Inverse polygon: outer rectangle covers the eastern Mediterranean region,
-// inner ring is Gaza's outline. The fill covers everywhere OUTSIDE Gaza in
-// cream — so the only basemap visible is inside the strip. The cream covers
-// flat ground content (roads, water, parks); buildings poking up via 3D
-// extrusion past the Gaza boundary remain visible from the side, which we
-// accept as an acceptable visual compromise (the user is centred on Gaza).
+// Two-part Gaza isolation:
+//
+// 1) A 3D fill-extrusion "wall" that rises from -10m to 1500m outside Gaza.
+//    This OCCLUDES any 3D building extrusions outside Gaza when the camera is
+//    tilted — a flat 2D polygon can't do that.
+//
+// 2) A flat mask polygon ON TOP of labels for any 2D content (labels, symbols)
+//    that the extrusion can't reach.
 function addGazaMask(map: Map): void {
   map.addSource('gaza-mask', {
     type: 'geojson',
     data: { type: 'Feature', properties: {}, geometry: GAZA_MASK_POLYGON },
   });
-  // Insert the mask just BEFORE the buildings-flat layer so that:
-  //   - all the ground content (water, roads, landcover) outside Gaza is masked
-  //   - buildings inside Gaza still draw on top (visible)
-  // If the buildings-flat layer isn't present yet, fall back to default (top).
-  const beforeId = map.getLayer('buildings-flat') ? 'buildings-flat' : undefined;
+
+  // 3D occlusion wall — inserted near the bottom of the layer stack so it
+  // composites correctly with 3D buildings via the GPU depth buffer.
+  const beforeBuildings = map.getLayer('buildings-flat') ? 'buildings-flat' : undefined;
   map.addLayer(
     {
-      id: 'gaza-mask-fill',
-      type: 'fill',
+      id: 'gaza-mask-wall',
+      type: 'fill-extrusion',
       source: 'gaza-mask',
       paint: {
-        'fill-color': MASK_COLOR,
-        'fill-opacity': 1,
+        'fill-extrusion-color': MASK_COLOR,
+        'fill-extrusion-height': 1500,
+        'fill-extrusion-base': -10,
+        'fill-extrusion-opacity': 1,
+        'fill-extrusion-vertical-gradient': false,
       },
     },
-    beforeId,
+    beforeBuildings,
   );
-  // Subtle boundary line along Gaza's edge. Rendered on top of mask + buildings.
+
+  // Flat mask on top for labels/symbols that render after fill-extrusion.
+  map.addLayer({
+    id: 'gaza-mask-fill',
+    type: 'fill',
+    source: 'gaza-mask',
+    paint: {
+      'fill-color': MASK_COLOR,
+      'fill-opacity': 1,
+    },
+  });
+
+  // Subtle Gaza boundary line, ABOVE the mask so visitors see the outline.
   map.addLayer({
     id: 'gaza-boundary-line',
     type: 'line',
     source: 'gaza-mask',
     paint: {
-      'line-color': '#8a7f6e',
-      'line-width': 1.4,
-      'line-opacity': 0.7,
+      'line-color': '#8a7250',
+      'line-width': 1.6,
+      'line-opacity': 0.8,
     },
   });
+}
+
+// Hide place labels that fall outside Gaza so the cream void isn't broken up
+// by "Sderot" or "Ashkelon" floating in the corner.
+function filterLabelsToGaza(map: Map): void {
+  const gazaPolygon: GeoJSON.Polygon = { type: 'Polygon', coordinates: [GAZA_OUTLINE] };
+  for (const id of ['place-city', 'place-neighbourhood']) {
+    if (map.getLayer(id)) {
+      try {
+        const existing = map.getFilter(id) as unknown;
+        const within = ['within', gazaPolygon];
+        const combined = existing ? (['all', existing, within] as unknown) : within;
+        map.setFilter(id, combined as maplibregl.FilterSpecification);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 }

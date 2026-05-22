@@ -10,6 +10,7 @@ import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
 import { mountLoading } from './ui/loading';
 import { mountLayerToggle } from './ui/layer-toggle';
+import { mountHeader } from './ui/header';
 import { parseHash, formatHash } from './url-state';
 
 async function start(): Promise<void> {
@@ -25,9 +26,11 @@ async function start(): Promise<void> {
 
   const map = mountMap(mapEl);
 
-  loading.setStatus('Loading incidents from Airwars…');
+  loading.setStatus('Loading incident data…');
   const { incidents, meta } = await loadIncidents();
   console.log(`Loaded ${incidents.length} incidents (${meta.unplotted_count} unplotted), build ${meta.build_date}`);
+
+  mountHeader(app, { meta, incidentCount: incidents.length });
 
   const markers = mountMarkers(map, incidents);
   const tooltip = mountTooltip(app);
