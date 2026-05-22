@@ -12,9 +12,9 @@ const NAV_BOUNDS: [[number, number], [number, number]] = [
 
 const GAZA_CENTER: [number, number] = [34.40, 31.42];
 
-// Cream color (same as our palette `paper`) for both the flat mask + the 3D
+// Off-white (matches the CSS `--bg` token) for both the flat mask + the 3D
 // "containment wall" that occludes anything outside Gaza when tilted.
-const MASK_COLOR = '#f4ede0';
+const MASK_COLOR = '#f7f6f3';
 
 export function mountMap(container: HTMLElement): Map {
   const map = new maplibregl.Map({
@@ -95,15 +95,16 @@ function addGazaMask(map: Map): void {
     },
   });
 
-  // Subtle Gaza boundary line, ABOVE the mask so visitors see the outline.
+  // Hairline Gaza boundary, kept very subtle so the geometry of the strip
+  // reads without competing with the markers.
   map.addLayer({
     id: 'gaza-boundary-line',
     type: 'line',
     source: 'gaza-mask',
     paint: {
-      'line-color': '#8a7250',
-      'line-width': 1.6,
-      'line-opacity': 0.8,
+      'line-color': '#6c6760',
+      'line-width': 0.8,
+      'line-opacity': 0.5,
     },
   });
 }

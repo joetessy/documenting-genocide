@@ -92,11 +92,11 @@ export function mountHeader(
   el.id = 'header';
   el.innerHTML = `
     <h1 class="title">The Gaza Exhibit</h1>
-    <p class="subtitle">A geographic record of the war on Gaza since October 2023. Every marker is a documented incident or damaged structure.</p>
+    <p class="subtitle">A geographic record of the war on Gaza since Oct 7, 2023.</p>
     <div class="stats">
       <div class="stat"><strong id="stat-incidents">0</strong>Incidents</div>
-      <div class="stat"><strong id="stat-damage">0</strong>Damaged buildings</div>
-      <div class="stat"><strong id="stat-killed">0</strong>Reported killed</div>
+      <div class="stat"><strong id="stat-damage">0</strong>Buildings</div>
+      <div class="stat"><strong id="stat-killed">0</strong>Killed</div>
     </div>
   `;
   parent.appendChild(el);

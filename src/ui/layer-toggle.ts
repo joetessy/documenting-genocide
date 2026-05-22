@@ -8,8 +8,7 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
   el.innerHTML = `
     <div class="lt-heading">Layers</div>
     <label><input type="checkbox" id="toggle-incidents" checked /> Incidents</label>
-    <label><input type="checkbox" id="toggle-damage" checked /> Damage assessment</label>
-    <div class="lt-note">Damage: UNOSAT, accumulates with the timeline. Each dot is a building's first assessed damage. ~196K buildings.</div>
+    <label><input type="checkbox" id="toggle-damage" checked /> Damaged buildings</label>
   `;
   parent.appendChild(el);
 
