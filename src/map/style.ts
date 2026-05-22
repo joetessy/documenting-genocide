@@ -1,22 +1,22 @@
 import type { StyleSpecification, LayerSpecification } from 'maplibre-gl';
 
-// Muted cartographic palette — warm earth tones, the design spec's editorial look.
+// Neutral minimal palette — to match the contemporary off-white UI.
 const COLORS = {
-  paper: '#f4ede0',          // background / land
-  paperShadow: '#ebe2d0',    // subtle landuse tint
-  water: '#c8d4dc',          // sea + waterways
-  waterDeep: '#b0bdc8',      // ocean shadow
-  road: '#c8b88f',           // minor road hairline
-  roadMajor: '#a09176',      // primary road
-  roadCasing: '#8a7f6e',     // road outline
-  buildingFlat: '#dcc8a0',
-  buildingLow: '#d6c08f',
-  buildingMid: '#b89c70',
-  buildingHigh: '#9c7d4f',
-  buildingStroke: '#8a7250',
-  label: '#3a3530',          // dark warm grey
-  labelLight: '#6e6660',
-  border: '#8a7f6e',
+  paper: '#f7f6f3',          // background / land — matches CSS --bg
+  paperShadow: '#eeece6',
+  water: '#dfe4e8',          // very soft cool grey for the Mediterranean
+  waterDeep: '#c8cfd5',
+  road: '#cfc8b8',
+  roadMajor: '#8a847a',
+  roadCasing: '#6c6760',
+  buildingFlat: '#d8d2c4',
+  buildingLow: '#cec6b3',
+  buildingMid: '#a8a092',
+  buildingHigh: '#7d7568',
+  buildingStroke: '#6c6760',
+  label: '#15140f',
+  labelLight: '#7a766c',
+  border: '#7a766c',
 } as const;
 
 // OpenFreeMap serves the openmaptiles vector schema at this URL; we don't use
@@ -223,11 +223,11 @@ export function gazaStyle(): StyleSpecification {
     },
     layers: LAYERS,
     sky: {
-      'sky-color': '#d8e0d8',
-      'horizon-color': '#e8e2d0',
-      'fog-color': '#f4ede0',
+      'sky-color': '#e6e9ec',
+      'horizon-color': '#eeece6',
+      'fog-color': '#f7f6f3',
       'fog-ground-blend': 0.6,
-      'horizon-fog-blend': 0.8,
+      'horizon-fog-blend': 0.85,
       'sky-horizon-blend': 0.6,
       'atmosphere-blend': 0.5,
     },
