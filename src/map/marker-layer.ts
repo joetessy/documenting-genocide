@@ -31,6 +31,21 @@ export interface MarkerLayerHandle {
 
 export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle {
   const features = toGeoJSON(incidents);
+  // Track desired filter state so we can apply it as soon as the layer exists.
+  // Without this, calls before the style 'load' event silently no-op and the
+  // layer ends up with the placeholder '1900-01-01' filter — no markers visible.
+  let pendingDate: string | null = null;
+  let pendingHoveredId: string | null = null;
+  let layerReady = false;
+
+  function applyPending(): void {
+    if (pendingDate !== null && map.getLayer(LAYER_ID)) {
+      map.setFilter(LAYER_ID, ['<=', ['get', 'date'], pendingDate]);
+    }
+    if (map.getLayer(HOVERED_ID)) {
+      map.setFilter(HOVERED_ID, ['==', ['get', 'id'], pendingHoveredId ?? '']);
+    }
+  }
 
   function addSourcesAndLayers(): void {
     map.addSource(SOURCE_ID, { type: 'geojson', data: features });
@@ -46,7 +61,11 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
         'circle-stroke-width': 1.5,
         'circle-opacity': 0.9,
       },
-      filter: ['<=', ['get', 'date'], '1900-01-01'],  // initially hide everything
+      // Use pendingDate if set; otherwise hide everything until the controller
+      // calls setVisibleDate with a real date.
+      filter: pendingDate
+        ? ['<=', ['get', 'date'], pendingDate]
+        : ['<=', ['get', 'date'], '1900-01-01'],
     });
 
     map.addLayer({
@@ -60,8 +79,10 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
         'circle-stroke-width': 2,
         'circle-opacity': 1,
       },
-      filter: ['==', ['get', 'id'], ''],
+      filter: ['==', ['get', 'id'], pendingHoveredId ?? ''],
     });
+
+    layerReady = true;
   }
 
   if (map.isStyleLoaded()) addSourcesAndLayers();
@@ -69,14 +90,12 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
 
   return {
     setVisibleDate(date: string): void {
-      if (map.getLayer(LAYER_ID)) {
-        map.setFilter(LAYER_ID, ['<=', ['get', 'date'], date]);
-      }
+      pendingDate = date;
+      if (layerReady) applyPending();
     },
     setHoveredId(id: string | null): void {
-      if (map.getLayer(HOVERED_ID)) {
-        map.setFilter(HOVERED_ID, ['==', ['get', 'id'], id ?? '']);
-      }
+      pendingHoveredId = id;
+      if (layerReady) applyPending();
     },
   };
 }
