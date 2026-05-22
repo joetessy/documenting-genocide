@@ -51,7 +51,11 @@ async function start(): Promise<void> {
     }
   });
 
-  const firstDate = incidents[0]?.date ?? '2023-10-07';
+  // Anchor the timeline to the start of the war regardless of what the data
+  // happens to contain. The build pipeline already filters pre-war records,
+  // but this also covers the case where the earliest incident is a few days
+  // after Oct 7 — we still want the slider to begin at Oct 7 itself.
+  const firstDate = '2023-10-07';
   const lastDate = incidents[incidents.length - 1]?.date ?? '2024-12-31';
   const initial = parseHash(location.hash);
 
