@@ -100,8 +100,13 @@ async function start(): Promise<void> {
     }
   });
 
-  // Wait for map's first render before hiding loading.
-  map.once('idle', () => loading.destroy());
+  // Wait for map's first paint before hiding loading. Use 'load' (fires once style
+  // is parsed and visible tiles are requested) rather than 'idle' — 'idle' may
+  // never fire if any tile request errors.
+  map.once('load', () => loading.destroy());
+  // Safety fallback: hide loading after 8s no matter what, so a tile outage
+  // doesn't leave the user staring at a blank screen.
+  setTimeout(() => loading.destroy(), 8000);
 }
 
 start().catch((err) => {
