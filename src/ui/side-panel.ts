@@ -208,29 +208,30 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
     const figureLabel = `${qualifier}${formatN(ev.figure)} displaced`;
     const placeLabel = ev.location.name ? escapeHtml(ev.location.name) : 'Gaza';
 
-    const sourcesHtml = ev.sources.map((s) => `
-      <li class="sp-source">
-        <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">
-          ${escapeHtml(ORG_LABEL[s.org] ?? s.org)}
-        </a>
-      </li>
-    `).join('');
+    const sourcesHtml = ev.sources
+      .map((s) => `<div class="sp-source">
+      <span class="sp-source-org">${ORG_LABEL[s.org] ?? s.org.toUpperCase()}</span>
+      <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.id)}</a>
+    </div>`)
+      .join('');
 
     el.innerHTML = `
-      <button class="sp-close" aria-label="Close">×</button>
-      <div class="sp-kicker">Displacement event</div>
-      <div class="sp-date">${dateLabel}</div>
-      <div class="sp-location">${placeLabel}</div>
-      <div class="sp-figure">
-        <strong>${escapeHtml(figureLabel)}</strong>
-        <span class="sp-figure-type">${escapeHtml(typeLabel)}</span>
+      <button class="sp-close" aria-label="Close panel">✕</button>
+      <div class="sp-body">
+        <div class="sp-cat">Displacement event</div>
+        <h2 class="sp-title">${escapeHtml(figureLabel)}</h2>
+        <div class="sp-meta">${dateLabel} &middot; ${placeLabel} &middot; ${escapeHtml(typeLabel)}</div>
+
+        <div class="sp-desc">
+          <p>${escapeHtml(ev.description)}</p>
+        </div>
+
+        <div class="sp-sources-label">Sources (${ev.sources.length})</div>
+        <div class="sp-sources">${sourcesHtml}</div>
       </div>
-      <div class="sp-narrative">
-        <p>${escapeHtml(ev.description)}</p>
-      </div>
-      <ul class="sp-sources">${sourcesHtml}</ul>
     `;
     el.classList.add('is-open');
+    el.scrollTop = 0;
     attachCloseHandler();
   }
 

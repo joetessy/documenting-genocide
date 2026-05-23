@@ -484,23 +484,6 @@ button { font-family: inherit; }
   color: var(--ink-1);
 }
 
-.sp-figure {
-  margin: 0.75rem 0;
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-.sp-figure strong {
-  font-family: 'Newsreader', serif;
-  font-size: 1.6rem;
-  font-weight: 500;
-}
-.sp-figure-type {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b6b6b;
-}
 
 /* ───────────────────────────────────────────────────────────────────────────
    Layer toggle — compact chip-style
