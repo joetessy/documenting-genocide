@@ -17,7 +17,7 @@ export type IncidentCategory =
   | 'detention'
   | 'other';
 
-export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp' | 'idmc';
+export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp';
 
 export type CredibilityRating = 'fair' | 'weak' | 'contested' | 'confirmed';
 
@@ -62,31 +62,10 @@ export interface Incident {
   sources: SourceAttribution[];
 }
 
-export type DisplacementType = 'conflict' | 'disaster';
-
-export interface DisplacementEvent {
-  id: string;                         // e.g. 'idmc:246143'
-  date: string;                       // ISO YYYY-MM-DD — displacement_start_date
-  location: {
-    lat: number;
-    lon: number;
-    name?: string;                    // e.g. 'Gaza Strip, Palestinian Territories'
-  };
-  figure: number;                     // people displaced
-  displacement_type: DisplacementType;
-  qualifier: string;                  // 'total', 'more than or equal to', etc — raw IDMC qualifier text
-  // Single string, not string[] like Incident.description — IDMC publishes
-  // single-paragraph descriptions; we don't synthesize an array we'd always
-  // render as one paragraph anyway.
-  description: string;
-  sources: SourceAttribution[];
-}
-
 export interface BuildMeta {
   build_date: string;          // ISO datetime
   source_counts: Partial<Record<SourceOrg, number>>;
   dedup_merges: number;
   unplotted_count: number;     // records discarded for missing coordinates
   damage_count?: number;
-  displacement_count?: number;
 }

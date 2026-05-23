@@ -1,4 +1,4 @@
-import type { Incident, DisplacementEvent } from '@shared/types';
+import type { Incident } from '@shared/types';
 
 export interface HeaderHandle {
   updateForDate(date: string): void;
@@ -61,21 +61,6 @@ function buildDamageCumulative(features: Array<{ properties?: { assessment_date?
   return { dateStrings: dates, cumCount };
 }
 
-function buildDisplacementCumulative(events: DisplacementEvent[]): DamageCumulative {
-  const byDate = new Map<string, number>();
-  for (const e of events) {
-    byDate.set(e.date, (byDate.get(e.date) ?? 0) + e.figure);
-  }
-  const dates = [...byDate.keys()].sort();
-  const cumCount: number[] = [];
-  let cc = 0;
-  for (const d of dates) {
-    cc += byDate.get(d)!;
-    cumCount.push(cc);
-  }
-  return { dateStrings: dates, cumCount };
-}
-
 /** Binary search: largest index `i` where dates[i] <= target, or -1 if none. */
 function lookupCum(dates: string[], counts: number[], target: string): number {
   if (dates.length === 0) return 0;
@@ -101,7 +86,6 @@ export function mountHeader(
   opts: {
     incidents: Incident[];
     damageFeatures: Array<{ properties?: { assessment_date?: string } }>;
-    displacementEvents: DisplacementEvent[];
   },
 ): HeaderHandle {
   const el = document.createElement('header');
@@ -113,30 +97,25 @@ export function mountHeader(
       <div class="stat"><strong id="stat-incidents">0</strong>Incidents</div>
       <div class="stat"><strong id="stat-damage">0</strong>Buildings</div>
       <div class="stat"><strong id="stat-killed">0</strong>Killed</div>
-      <div class="stat"><strong id="stat-displaced">0</strong>Displaced</div>
     </div>
   `;
   parent.appendChild(el);
 
   const incidentCum = buildIncidentCumulative(opts.incidents);
   const damageCum = buildDamageCumulative(opts.damageFeatures);
-  const displacementCum = buildDisplacementCumulative(opts.displacementEvents);
 
   const elIncidents = el.querySelector<HTMLElement>('#stat-incidents')!;
   const elDamage = el.querySelector<HTMLElement>('#stat-damage')!;
   const elKilled = el.querySelector<HTMLElement>('#stat-killed')!;
-  const elDisplaced = el.querySelector<HTMLElement>('#stat-displaced')!;
 
   return {
     updateForDate(date: string) {
       const inc = lookupCum(incidentCum.dateStrings, incidentCum.cumCount, date);
       const killed = lookupCum(incidentCum.dateStrings, incidentCum.cumKilled, date);
       const dam = lookupCum(damageCum.dateStrings, damageCum.cumCount, date);
-      const disp = lookupCum(displacementCum.dateStrings, displacementCum.cumCount, date);
       elIncidents.textContent = fmt.format(inc);
       elDamage.textContent = fmt.format(dam);
       elKilled.textContent = fmt.format(killed);
-      elDisplaced.textContent = fmt.format(disp);
     },
   };
 }

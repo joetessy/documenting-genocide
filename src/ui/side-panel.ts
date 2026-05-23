@@ -1,4 +1,4 @@
-import type { Incident, CredibilityRating, SourceOrg, DamageStatus, DisplacementEvent } from '@shared/types';
+import type { Incident, CredibilityRating, SourceOrg, DamageStatus } from '@shared/types';
 import type { DamageFeature } from '../data/loader';
 
 const RATING_LABELS: Record<CredibilityRating, string> = {
@@ -13,7 +13,6 @@ const ORG_LABEL: Record<SourceOrg, string> = {
   acled: 'ACLED',
   ocha: 'OCHA',
   ucdp: 'UCDP',
-  idmc: 'IDMC',
 };
 
 const DAMAGE_CLASS_LABEL: Record<number, DamageStatus> = {
@@ -59,7 +58,6 @@ function formatDateShort(iso: string): string {
 export interface SidePanelHandle {
   openIncident(incident: Incident): void;
   openDamage(feature: DamageFeature): void;
-  openDisplacement(event: DisplacementEvent): void;
   close(): void;
 }
 
@@ -201,44 +199,9 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
     attachCloseHandler();
   }
 
-  function renderDisplacement(ev: DisplacementEvent): void {
-    const dateLabel = formatDate(ev.date);
-    const typeLabel = ev.displacement_type === 'conflict' ? 'Conflict-driven' : 'Disaster-driven';
-    const qualifier = ev.qualifier && ev.qualifier !== 'total' ? `${escapeHtml(ev.qualifier)} ` : '';
-    const figureLabel = `${qualifier}${formatN(ev.figure)} displaced`;
-    const placeLabel = ev.location.name ? escapeHtml(ev.location.name) : 'Gaza';
-
-    const sourcesHtml = ev.sources
-      .map((s) => `<div class="sp-source">
-      <span class="sp-source-org">${ORG_LABEL[s.org] ?? s.org.toUpperCase()}</span>
-      <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.id)}</a>
-    </div>`)
-      .join('');
-
-    el.innerHTML = `
-      <button class="sp-close" aria-label="Close panel">✕</button>
-      <div class="sp-body">
-        <div class="sp-cat">Displacement event</div>
-        <h2 class="sp-title">${escapeHtml(figureLabel)}</h2>
-        <div class="sp-meta">${dateLabel} &middot; ${placeLabel} &middot; ${escapeHtml(typeLabel)}</div>
-
-        <div class="sp-desc">
-          <p>${escapeHtml(ev.description)}</p>
-        </div>
-
-        <div class="sp-sources-label">Sources (${ev.sources.length})</div>
-        <div class="sp-sources">${sourcesHtml}</div>
-      </div>
-    `;
-    el.classList.add('is-open');
-    el.scrollTop = 0;
-    attachCloseHandler();
-  }
-
   return {
     openIncident: renderIncident,
     openDamage: renderDamage,
-    openDisplacement: renderDisplacement,
     close() {
       el.classList.remove('is-open');
     },

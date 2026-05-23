@@ -3,19 +3,16 @@ import { join } from 'node:path';
 import { fetchAirwars } from './fetch-airwars';
 import { fetchUcdp } from './fetch-ucdp';
 import { fetchOcha } from './fetch-ocha';
-import { fetchIdmc } from './fetch-idmc';
-import { normalizeIdmcRow } from './normalize-idmc';
 import { normalizeAirwarsRecord, type AirwarsTaxonomies, type ArticleData } from './normalize-airwars';
 import { normalizeUcdpRecord } from './normalize-ucdp';
 import { normalizeOchaFeature } from './normalize-ocha';
 import { dedupeIncidents } from './dedupe';
-import type { Incident, BuildMeta, DamageRecord, DamageStatus, DisplacementEvent } from '../shared/types';
+import type { Incident, BuildMeta, DamageRecord, DamageStatus } from '../shared/types';
 
 const AIRWARS_RAW = 'data/raw/airwars';
 const ARTICLES_DIR = 'data/raw/airwars/articles';
 const UCDP_RAW = 'data/raw/ucdp';
 const OCHA_RAW = 'data/raw/ocha';
-const IDMC_RAW = 'data/raw/idmc';
 const OUT_DIR = 'public/data';
 
 async function loadAirwarsPages(): Promise<unknown[]> {
@@ -52,12 +49,6 @@ async function loadUcdpRows(): Promise<unknown[]> {
   } catch { return []; }
 }
 
-async function loadIdmcRows(): Promise<Record<string, string>[]> {
-  try {
-    return JSON.parse(await readFile(join(IDMC_RAW, 'idu-events.json'), 'utf8'));
-  } catch { return []; }
-}
-
 async function loadOchaFeatures(): Promise<GeoJSON.Feature[]> {
   try {
     const fc = JSON.parse(await readFile(join(OCHA_RAW, 'damage.geojson'), 'utf8')) as GeoJSON.FeatureCollection;
@@ -69,7 +60,6 @@ async function main(): Promise<void> {
   await fetchAirwars();
   await fetchUcdp();
   await fetchOcha();
-  await fetchIdmc();
 
   const airwarsRaws = await loadAirwarsPages();
   const taxonomies = await loadTaxonomies();
@@ -95,17 +85,6 @@ async function main(): Promise<void> {
   console.log(`Normalized ${airwarsIncidents.length} Airwars + ${ucdpIncidents.length} UCDP incidents`);
   console.log(`  Unplotted: ${airwarsUnplotted} Airwars, ${ucdpUnplotted} UCDP`);
 
-  const idmcRaws = await loadIdmcRows();
-  console.log(`Loaded ${idmcRaws.length} IDMC raw rows`);
-  const displacementEvents: DisplacementEvent[] = [];
-  let idmcUnplotted = 0;
-  for (const raw of idmcRaws) {
-    const ev = normalizeIdmcRow(raw);
-    if (ev) displacementEvents.push(ev);
-    else idmcUnplotted++;
-  }
-  console.log(`Normalized ${displacementEvents.length} IDMC displacement events (${idmcUnplotted} dropped)`);
-
   const { incidents: dedupedIncidents, merges } = dedupeIncidents([...airwarsIncidents, ...ucdpIncidents]);
   console.log(`Dedup: ${airwarsIncidents.length + ucdpIncidents.length} → ${dedupedIncidents.length} (${merges} merges)`);
 
@@ -115,11 +94,6 @@ async function main(): Promise<void> {
   const incidents = dedupedIncidents.filter((i) => i.date >= CONFLICT_START);
   const preWarDropped = dedupedIncidents.length - incidents.length;
   console.log(`Filtered to ${CONFLICT_START}+: ${incidents.length} (dropped ${preWarDropped} pre-war records)`);
-
-  const displacement = displacementEvents
-    .filter((d) => d.date >= CONFLICT_START)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  console.log(`Filtered displacement to ${CONFLICT_START}+: ${displacement.length}`);
 
   incidents.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -190,20 +164,12 @@ async function main(): Promise<void> {
   await writeFile(join(OUT_DIR, 'damage.geojson'), JSON.stringify(damageFc));
   console.log(`Wrote ${damageInConflict.length} damage records to ${OUT_DIR}/damage.geojson`);
 
-  await writeFile(join(OUT_DIR, 'displacement.json'), JSON.stringify(displacement));
-  console.log(`Wrote ${displacement.length} displacement events to ${OUT_DIR}/displacement.json`);
-
   const meta: BuildMeta = {
     build_date: new Date().toISOString(),
-    source_counts: {
-      airwars: airwarsIncidents.length,
-      ucdp: ucdpIncidents.length,
-      idmc: displacementEvents.length,
-    },
+    source_counts: { airwars: airwarsIncidents.length, ucdp: ucdpIncidents.length },
     dedup_merges: merges,
-    unplotted_count: airwarsUnplotted + ucdpUnplotted + idmcUnplotted,
+    unplotted_count: airwarsUnplotted + ucdpUnplotted,
     damage_count: damageInConflict.length,
-    displacement_count: displacement.length,
   };
   await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
 
