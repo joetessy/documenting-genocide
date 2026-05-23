@@ -14,7 +14,7 @@ The driving constraint from the original spec stands: **only geolocated data**. 
 
 1. **ACLED is unavailable** for direct map display under any license tier. Their licensing team confirmed in writing that the agreement prohibits rendering ACLED records as individual points on an interactive map regardless of attribution — across Open, Research, and commercial tiers. The data may only be used in derivative or transformed products. This rules out ACLED as a source for the exhibit as designed.
 
-2. **OCHA's Humanitarian Data Exchange (HDX) discovery pass found six immediately-usable, openly-licensed Gaza datasets** that we did not previously know about. These need no permission emails — their licenses (CC-BY / CC-BY-SA / CC-BY-IGO / ODbL) explicitly permit reuse with attribution.
+2. **OCHA's Humanitarian Data Exchange (HDX) discovery pass found five immediately-usable, openly-licensed Gaza datasets** that we did not previously know about. These need no permission emails — their licenses (CC-BY / CC-BY-SA / ODbL) explicitly permit reuse with attribution.
 
 3. **Two sources from the original handoff candidate list turned out not to have what we need:** Bellingcat (no structured Gaza database; their J&A Unit shut down July 2025 and the work moved to GLAN DRAGNET) and Euro-Med Human Rights Monitor (aggregate press releases only, no per-event coordinates).
 
@@ -33,7 +33,7 @@ The existing Airwars layer (1,590 incidents with multi-paragraph scraped narrati
 
 Established after the ACLED experience:
 
-- **If the dataset's license explicitly permits reuse with attribution** (CC-BY, CC-BY-SA, CC-BY-IGO, CC0, ODbL, public domain, government open-data), integrate without contacting the publisher. Attribute per their stated terms.
+- **If the dataset's license explicitly permits reuse with attribution** (CC-BY, CC-BY-SA, CC0, ODbL, public domain, government open-data), integrate without contacting the publisher. Attribute per their stated terms.
 - **If the dataset has no published license, or has restrictive language**, do not integrate without written go-ahead. Send a permission request describing the exact use, scope, attribution, and distribution model, and wait for a yes.
 - **Default-to-ask in ambiguous cases.** Better to wait than to need a takedown later.
 
@@ -41,30 +41,28 @@ We use the same email template for permission requests across organizations, cus
 
 ## Sources — Tier A: clear-licensed (integrate without permission)
 
-All six surfaced from the HDX discovery pass. Each is downloadable today.
+All five surfaced from the HDX discovery pass. Each is downloadable today.
 
 | # | Source | What it adds | Records | License | URL |
 |---|---|---|---|---|---|
-| A1 | **IDMC Internal Displacement Updates (IDU) — State of Palestine** | Geolocated displacement events with people-displaced figures and source links. New category entirely. | 323 (growing monthly) | CC BY-IGO | https://data.humdata.org/dataset/pse-idmc-idu-events |
-| A2 | **UNOSAT — FAO Gaza Cropland Damage Assessment (July 2025)** | NDVI-based agricultural-loss polygons. | thousands of polygons | CC BY-SA | https://data.humdata.org/dataset/unosat-fao-gaza-strip-cropland-damage-assessment-july-2025 |
-| A3 | **UNOSAT Gaza Road Network Damage (July 2025)** | Polyline damage: 1,511 km destroyed, 484 km severely, 1,484 km moderate. | ~3,500 km of polylines | CC BY-SA | https://data.humdata.org/dataset/unosat-gaza-strip-road-network-comprehensive-damage-assessment-july-2025 |
-| A4 | **UNOSAT — FAO Greenhouse Damage Assessment (Dec 2024)** | Greenhouse damage polygons. | hundreds of polygons | CC BY-SA | https://data.humdata.org/dataset/unosat-fao-gaza-strip-greenhouse-comprehensive-damage-assessment-december-2024 |
-| A5 | **OCHA oPt Health Facilities** | Static reference layer: 505 hospitals and clinics across Gaza and West Bank, with type and governorate. | 505 points | CC BY | https://data.humdata.org/dataset/state-of-palestine-health-0 |
-| A6 | **HOT/OSM Health + Education Facilities (Palestine)** | Reference layer, more complete than OCHA's, refreshed monthly. | ~hundreds across both categories | ODbL | https://data.humdata.org/dataset/hotosm_pse_health_facilities and `…_education_facilities` |
+| A1 | **UNOSAT — FAO Gaza Cropland Damage Assessment (July 2025)** | NDVI-based agricultural-loss polygons. | thousands of polygons | CC BY-SA | https://data.humdata.org/dataset/unosat-fao-gaza-strip-cropland-damage-assessment-july-2025 |
+| A2 | **UNOSAT Gaza Road Network Damage (July 2025)** | Polyline damage: 1,511 km destroyed, 484 km severely, 1,484 km moderate. | ~3,500 km of polylines | CC BY-SA | https://data.humdata.org/dataset/unosat-gaza-strip-road-network-comprehensive-damage-assessment-july-2025 |
+| A3 | **UNOSAT — FAO Greenhouse Damage Assessment (Dec 2024)** | Greenhouse damage polygons. | hundreds of polygons | CC BY-SA | https://data.humdata.org/dataset/unosat-fao-gaza-strip-greenhouse-comprehensive-damage-assessment-december-2024 |
+| A4 | **OCHA oPt Health Facilities** | Static reference layer: 505 hospitals and clinics across Gaza and West Bank, with type and governorate. | 505 points | CC BY | https://data.humdata.org/dataset/state-of-palestine-health-0 |
+| A5 | **HOT/OSM Health + Education Facilities (Palestine)** | Reference layer, more complete than OCHA's, refreshed monthly. | ~hundreds across both categories | ODbL | https://data.humdata.org/dataset/hotosm_pse_health_facilities and `…_education_facilities` |
 
 ### Priority ordering within Tier A
 
-1. **A1 (IDMC displacement)** — highest user-visible impact. Displacement is a category the exhibit currently does not represent at all. Each record is a real event with a figure and sources.
-2. **A2 + A3 + A4 (UNOSAT extended)** — extend the existing damage layer with categories beyond buildings. Same fetch pattern as the current `fetch-ocha.ts`, lowest engineering risk.
-3. **A5 OR A6 (facilities)** — pick one. OCHA's is authoritative but a snapshot; HOT/OSM is community-maintained and updates monthly. Recommend HOT/OSM for freshness, with OCHA as a fallback if HOT/OSM coverage is patchy. Either way these are a **static overlay**, not timeline-driven.
+1. **A1 + A2 + A3 (UNOSAT extended)** — extend the existing damage layer with categories beyond buildings. Same fetch pattern as the current `fetch-ocha.ts`, lowest engineering risk, highest visual payoff.
+2. **A4 OR A5 (facilities)** — pick one. OCHA's is authoritative but a snapshot; HOT/OSM is community-maintained and updates monthly. Recommend HOT/OSM for freshness, with OCHA as a fallback if HOT/OSM coverage is patchy. Either way these are a **static overlay**, not timeline-driven.
 
 ### License compatibility note
 
-The CC BY-SA datasets (A2/A3/A4) require share-alike on any redistributed derivative. For the exhibit, this means:
+The CC BY-SA datasets (A1/A2/A3) require share-alike on any redistributed derivative. For the exhibit, this means:
 
 - Display in the running site is unaffected.
-- Any normalized files we commit into `public/data/` that incorporate A2/A3/A4 must be redistributed under CC BY-SA, with attribution.
-- Mixed-license `damage.geojson` is **not acceptable**. We will keep A2/A3/A4 in separate output files (`damage-cropland.geojson`, `damage-roads.geojson`, `damage-greenhouses.geojson`) so each file carries one license, declared in a sibling LICENSE note or in the file's `meta` block.
+- Any normalized files we commit into `public/data/` that incorporate A1/A2/A3 must be redistributed under CC BY-SA, with attribution.
+- Mixed-license `damage.geojson` is **not acceptable**. We will keep A1/A2/A3 in separate output files (`damage-cropland.geojson`, `damage-roads.geojson`, `damage-greenhouses.geojson`) so each file carries one license, declared in a sibling LICENSE note or in the file's `meta` block.
 
 ## Sources — Tier B: permission-pending
 
@@ -93,7 +91,7 @@ If only one comes back yes, integrate that one and revisit the others later.
 
 ## Type system implications
 
-The existing types in `shared/types.ts` accommodate per-source incidents fine. The new sources require modest extensions and one new top-level type.
+The existing types in `shared/types.ts` accommodate per-source incidents fine. The new sources require modest extensions and two new top-level types.
 
 ### 1. Extend `SourceOrg`
 
@@ -103,32 +101,15 @@ export type SourceOrg =
   | 'acled'        // retained for compatibility; not actively used
   | 'ocha'
   | 'ucdp'
-  | 'idmc'         // A1 displacement
-  | 'unosat_fao'   // A2 + A4 (cropland, greenhouses)
-  | 'unosat_road'  // A3 (roads)
-  | 'osm'          // A6 (HOT/OSM facilities)
+  | 'unosat_fao'   // A1 + A3 (cropland, greenhouses)
+  | 'unosat_road'  // A2 (roads)
+  | 'osm'          // A5 (HOT/OSM facilities)
   | 'fa'           // B1 (if approved)
   | 'cir'          // B2 (if approved)
   | 'aoav';        // B3 (if approved)
 ```
 
-### 2. New `DisplacementEvent` type (for A1)
-
-Displacement is conceptually different from an Incident: it represents a population flow, not a discrete attack. Modeling it as `Incident` would be a category error.
-
-```ts
-export interface DisplacementEvent {
-  id: string;
-  date: string;                       // ISO YYYY-MM-DD (event start)
-  location: { lat: number; lon: number; name?: string };
-  figure: number;                     // people displaced
-  displacement_type: 'conflict' | 'disaster' | 'unknown';
-  description: string;
-  sources: SourceAttribution[];       // IDMC `link` and `sources` fields
-}
-```
-
-### 3. New `DamageFeature` type (for A2/A3/A4 and possibly FA Environment)
+### 2. New `DamageFeature` type (for A1/A2/A3 and possibly FA Environment)
 
 The existing `DamageRecord` is point-based and building-status-oriented. The new damage layers are polygons and polylines with damage-class metadata, not building-level.
 
@@ -148,7 +129,7 @@ export interface DamageFeature {
 
 These ship as separate GeoJSON files (`damage-cropland.geojson`, `damage-roads.geojson`, `damage-greenhouses.geojson`) because they have different licenses (CC BY-SA) than the existing `damage.geojson` (CC BY-IGO 3.0).
 
-### 4. New `FacilityRecord` type (for A5/A6)
+### 3. New `FacilityRecord` type (for A4/A5)
 
 Reference layer, static, not timeline-driven.
 
@@ -164,7 +145,7 @@ export interface FacilityRecord {
 }
 ```
 
-### 5. `Incident` extensions for permission-pending sources
+### 4. `Incident` extensions for permission-pending sources
 
 If B2 (CIR) is approved, each CIR record normalizes cleanly into the existing `Incident` shape — date, lat, lon, category, casualties, multiple source URLs. No type change needed beyond adding `'cir'` to `SourceOrg`.
 
@@ -178,13 +159,11 @@ Follows the existing per-source pattern:
 
 ```
 scripts/
-  fetch-idmc.ts          (A1)
-  normalize-idmc.ts      (A1)
-  fetch-unosat-fao.ts    (A2 + A4)
+  fetch-unosat-fao.ts    (A1 + A3)
   normalize-unosat-fao.ts
-  fetch-unosat-road.ts   (A3)
+  fetch-unosat-road.ts   (A2)
   normalize-unosat-road.ts
-  fetch-osm-facilities.ts (A6)
+  fetch-osm-facilities.ts (A5)
   normalize-osm-facilities.ts
   fetch-fa.ts            (B1 — built after permission)
   normalize-fa.ts
@@ -196,7 +175,7 @@ scripts/
 
 Each fetch caches to `data/raw/{source}/`. Each normalize is TDD-tested per the existing convention. `build-data.ts` orchestrates and writes to `public/data/`.
 
-**Dedup interaction:** Only `Incident` records run through `dedupe.ts`. `DisplacementEvent`, `DamageFeature`, and `FacilityRecord` are not deduplicated against incidents — they're parallel layers, not the same conceptual entity. Cross-source dedup applies only when the same real-world incident is reported by multiple sources (Airwars + UCDP + future CIR/FA/AOAV).
+**Dedup interaction:** Only `Incident` records run through `dedupe.ts`. `DamageFeature` and `FacilityRecord` are not deduplicated against incidents — they're parallel layers, not the same conceptual entity. Cross-source dedup applies only when the same real-world incident is reported by multiple sources (Airwars + UCDP + future CIR/FA/AOAV).
 
 **Pre-Oct-7 filter:** All new sources apply the same Oct-7-2023 filter at the normalize step. (Exception: facility records have no date; they pass through.)
 
@@ -206,12 +185,11 @@ Each fetch caches to `data/raw/{source}/`. Each normalize is TDD-tested per the 
 
 The existing toggle has Incidents + Damaged-buildings. We add:
 
-- Displacement (A1) — distinct visual treatment, e.g. concentric ring at the destination location with radius scaled to `figure`. Probably default-off to avoid visual overload.
-- Cropland damage (A2) — toggleable polygon fill.
-- Road damage (A3) — toggleable polyline overlay.
-- Greenhouse damage (A4) — toggleable polygon fill.
-- Health facilities (A5 or A6) — small icon overlay; subtle, default off.
-- Education facilities (A6) — same.
+- Cropland damage (A1) — toggleable polygon fill.
+- Road damage (A2) — toggleable polyline overlay.
+- Greenhouse damage (A3) — toggleable polygon fill.
+- Health facilities (A4 or A5) — small icon overlay; subtle, default off.
+- Education facilities (A5) — same.
 
 Open question: how many simultaneous toggles is too many? At some point the layer-toggle UI should become a grouped panel rather than a flat checklist. Resolved in implementation.
 
@@ -219,22 +197,20 @@ Open question: how many simultaneous toggles is too many? At some point the laye
 
 New side-panel modes:
 
-- **Displacement** — date, people displaced, displacement type, source link. Less narrative-heavy than an Incident panel.
 - **Damage feature (polygon / line)** — kind, status, assessment date, source. Clicking a cropland polygon shows assessment date and damaged area.
 - **Facility** — name, kind, governorate, source. No timeline content.
 
-Incident, Damage (existing building), Displacement, Damage-feature, and Facility are all distinct panel modes. The existing `side-panel.ts` already has two modes (incident / damage); we extend to five.
+Incident, Damage (existing building), Damage-feature, and Facility are all distinct panel modes. The existing `side-panel.ts` already has two modes (incident / damage); we extend to four.
 
 ### Attribution
 
-Each record's panel surfaces its source org with the agreed attribution string. Add an /about page (currently absent) that lists every source, its license, and a link to the data hub. This is non-negotiable for the CC BY / CC BY-SA / CC BY-IGO / ODbL terms.
+Each record's panel surfaces its source org with the agreed attribution string. Add an /about page (currently absent) that lists every source, its license, and a link to the data hub. This is non-negotiable for the CC BY / CC BY-SA / ODbL terms.
 
 ### Counters in the header
 
 The header currently shows three live counters (Incidents / Buildings / Killed). Consider adding:
 
-- **Displaced** (cumulative from IDMC) — distinct from Killed.
-- **Cropland damaged (km²)** or **roads damaged (km)** — derived from A2/A3 totals. Probably one, not both, to avoid header clutter.
+- **Cropland damaged (km²)** or **roads damaged (km)** — derived from A1/A2 totals. Probably one, not both, to avoid header clutter.
 
 Decided at implementation time based on visual density.
 
@@ -242,31 +218,26 @@ Decided at implementation time based on visual density.
 
 **Phase A — clear-licensed (no waiting):**
 
-1. A1 IDMC displacement integration (fetch + normalize + new layer + side-panel mode + header counter). Most user-visible win.
-2. A2 + A3 + A4 UNOSAT extended damage layers. Same pattern as existing `fetch-ocha.ts`. Three layers, can ship together or one at a time.
-3. A5 / A6 facilities layer. Smallest visual impact; do last in Phase A.
+1. A1 + A2 + A3 UNOSAT extended damage layers. Same pattern as existing `fetch-ocha.ts`. Three layers, can ship together or one at a time.
+2. A4 / A5 facilities layer. Smallest visual impact; do last in Phase A.
 
 **Phase B — permission-conditional:**
 
 For each Tier B yes:
 
-4. Per-source fetch + normalize + integration. Order by which permission lands first.
+3. Per-source fetch + normalize + integration. Order by which permission lands first.
 
-If no Tier B permissions come through, Phase A is the entirety of the work and still represents a substantial expansion (displacement + three new damage categories + facilities overlay).
+If no Tier B permissions come through, Phase A is the entirety of the work and still represents a substantial expansion (three new damage categories + facilities overlay).
 
 ## Risks & open questions
 
 1. **CC BY-SA share-alike contagion.** Mitigated by keeping the SA-licensed outputs in separate files with explicit per-file license declaration. Confirm the approach with a brief LICENSE.md addition before shipping.
 
-2. **Layer-toggle UI overcrowding.** With 5–8 layer toggles, the current flat checklist becomes unwieldy. Implementation will likely group toggles (Events / Damage / Reference).
+2. **Layer-toggle UI overcrowding.** With 5–7 layer toggles, the current flat checklist becomes unwieldy. Implementation will likely group toggles (Events / Damage / Reference).
 
 3. **No permission responses.** If all three Tier B requests stall or get declined, Phase A still ships meaningfully. There is no scenario where we wait indefinitely.
 
-4. **HOT/OSM completeness vs. OCHA accuracy.** Unknown which is better for Gaza-specific facility coverage. Decide after a one-day discovery comparison during A5/A6 implementation.
-
-5. **IDMC update cadence.** Dataset is monthly; the existing build is manual. A future GitHub Actions cron is mentioned in the handoff but out of scope here.
-
-6. **Displacement visualization.** "People displaced" is a flow, not a point. A point on the map represents the *destination* — but the actual displacement involves a path. Initial implementation: place point at the IDMC-published lat/lon, size scaled to figure. Possible later enhancement: render flow lines if we have origin data.
+4. **HOT/OSM completeness vs. OCHA accuracy.** Unknown which is better for Gaza-specific facility coverage. Decide after a one-day discovery comparison during A4/A5 implementation.
 
 ## References
 
@@ -279,4 +250,4 @@ If no Tier B permissions come through, Phase A is the entirety of the work and s
 
 ## Next step
 
-After user approval of this spec: invoke the `writing-plans` skill to produce a step-by-step implementation plan for **Phase A1 (IDMC displacement integration)** as the first concrete deliverable. Subsequent phases get their own plans.
+After user approval of this spec: invoke the `writing-plans` skill to produce a step-by-step implementation plan for **Phase A1 (UNOSAT extended damage layers)** as the first concrete deliverable. Subsequent phases get their own plans.
