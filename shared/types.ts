@@ -75,7 +75,10 @@ export interface DisplacementEvent {
   figure: number;                     // people displaced
   displacement_type: DisplacementType;
   qualifier: string;                  // 'total', 'more than or equal to', etc — raw IDMC qualifier text
-  description: string;                // single paragraph from IDMC `description` field
+  // Single string, not string[] like Incident.description — IDMC publishes
+  // single-paragraph descriptions; we don't synthesize an array we'd always
+  // render as one paragraph anyway.
+  description: string;
   sources: SourceAttribution[];
 }
 
