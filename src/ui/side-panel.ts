@@ -13,6 +13,7 @@ const ORG_LABEL: Record<SourceOrg, string> = {
   acled: 'ACLED',
   ocha: 'OCHA',
   ucdp: 'UCDP',
+  idmc: 'IDMC',
 };
 
 const DAMAGE_CLASS_LABEL: Record<number, DamageStatus> = {
