@@ -2,7 +2,8 @@ import './style.css';
 import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
-import { loadIncidents, loadDamage } from './data/loader';
+import { mountDisplacementLayer } from './map/displacement-layer';
+import { loadIncidents, loadDamage, loadDisplacement } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
 import { bucketByDay, bucketDamageByDay, renderHistogram } from './time/histogram';
@@ -34,7 +35,15 @@ async function start(): Promise<void> {
   const damageData = await loadDamage();
   console.log(`Loaded ${damageData.features.length} damage features`);
 
-  const header = mountHeader(app, { incidents, damageFeatures: damageData.features });
+  loading.setStatus('Loading displacement data…');
+  const displacement = await loadDisplacement();
+  console.log(`Loaded ${displacement.length} displacement events`);
+
+  const header = mountHeader(app, {
+    incidents,
+    damageFeatures: damageData.features,
+    displacementEvents: displacement,
+  });
 
   const markers = mountMarkers(map, incidents);
   const tooltip = mountTooltip(app);
@@ -43,9 +52,12 @@ async function start(): Promise<void> {
 
   const damage = await mountDamageLayer(map, damageData as unknown as GeoJSON.FeatureCollection);
   damage.setVisible(true);
+  const displacementLayer = await mountDisplacementLayer(map, displacement);
+  // Default off — see spec: visual overload risk at start.
   const layerToggle = mountLayerToggle(app);
   layerToggle.onChange((s) => {
     damage.setVisible(s.damage);
+    displacementLayer.setVisible(s.displacement);
     if (map.getLayer('incidents-circles')) {
       map.setLayoutProperty('incidents-circles', 'visibility', s.incidents ? 'visible' : 'none');
     }
@@ -69,6 +81,7 @@ async function start(): Promise<void> {
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
     damage.setVisibleDate(date);
+    displacementLayer.setVisibleDate(date);
     header.updateForDate(date);
     const newHash = formatHash({ date });
     if (newHash !== location.hash) {
@@ -77,6 +90,7 @@ async function start(): Promise<void> {
   });
   markers.setVisibleDate(timeCtrl.currentDate);
   damage.setVisibleDate(timeCtrl.currentDate);
+  displacementLayer.setVisibleDate(timeCtrl.currentDate);
   header.updateForDate(timeCtrl.currentDate);
 
   const histogramHost = mountScrubber(app, timeCtrl);
@@ -130,9 +144,28 @@ async function start(): Promise<void> {
     map.getCanvas().style.cursor = '';
   });
 
+  const displacementById = new Map(displacement.map((d) => [d.id, d]));
+
+  map.on('click', 'displacement-circles', (e) => {
+    if (!e.features || e.features.length === 0) return;
+    const id = e.features[0].properties?.id as string | undefined;
+    if (!id) return;
+    const ev = displacementById.get(id);
+    if (!ev) return;
+    sidePanel.openDisplacement(ev);
+  });
+
+  map.on('mouseenter', 'displacement-circles', () => {
+    map.getCanvas().style.cursor = 'pointer';
+  });
+  map.on('mouseleave', 'displacement-circles', () => {
+    map.getCanvas().style.cursor = '';
+  });
+
   map.on('click', (e) => {
     const hits = map.queryRenderedFeatures(e.point, {
-      layers: ['incidents-circles', 'damage-circles'].filter((l) => map.getLayer(l)),
+      layers: ['incidents-circles', 'damage-circles', 'displacement-circles']
+        .filter((l) => map.getLayer(l)),
     });
     if (hits.length === 0) {
       sidePanel.close();
