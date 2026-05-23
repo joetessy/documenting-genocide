@@ -17,7 +17,7 @@ export type IncidentCategory =
   | 'detention'
   | 'other';
 
-export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp';
+export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp' | 'osm';
 
 export type CredibilityRating = 'fair' | 'weak' | 'contested' | 'confirmed';
 
@@ -62,10 +62,24 @@ export interface Incident {
   sources: SourceAttribution[];
 }
 
+export type FacilityCategory = 'health' | 'education';
+
+export interface FacilityRecord {
+  id: string;                 // e.g. 'osm:node/505095722'
+  category: FacilityCategory;
+  subtype: string;            // OSM amenity value, e.g. 'pharmacy', 'school', 'university'
+  location: { lat: number; lon: number };
+  name: string;               // primary name (English or Latin transliteration)
+  name_ar?: string;           // Arabic name when present
+  governorate?: string;       // adm2_name from HOT/OSM (e.g. 'Rafah', 'Khan Younis')
+  source: SourceAttribution;
+}
+
 export interface BuildMeta {
   build_date: string;          // ISO datetime
   source_counts: Partial<Record<SourceOrg, number>>;
   dedup_merges: number;
   unplotted_count: number;     // records discarded for missing coordinates
   damage_count?: number;
+  facility_count?: number;
 }
