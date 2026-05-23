@@ -1,4 +1,4 @@
-import type { Incident, CredibilityRating, SourceOrg, DamageStatus } from '@shared/types';
+import type { Incident, CredibilityRating, SourceOrg, DamageStatus, DisplacementEvent } from '@shared/types';
 import type { DamageFeature } from '../data/loader';
 
 const RATING_LABELS: Record<CredibilityRating, string> = {
@@ -59,6 +59,7 @@ function formatDateShort(iso: string): string {
 export interface SidePanelHandle {
   openIncident(incident: Incident): void;
   openDamage(feature: DamageFeature): void;
+  openDisplacement(event: DisplacementEvent): void;
   close(): void;
 }
 
@@ -200,9 +201,43 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
     attachCloseHandler();
   }
 
+  function renderDisplacement(ev: DisplacementEvent): void {
+    const dateLabel = formatDate(ev.date);
+    const typeLabel = ev.displacement_type === 'conflict' ? 'Conflict-driven' : 'Disaster-driven';
+    const qualifier = ev.qualifier && ev.qualifier !== 'total' ? `${escapeHtml(ev.qualifier)} ` : '';
+    const figureLabel = `${qualifier}${formatN(ev.figure)} displaced`;
+    const placeLabel = ev.location.name ? escapeHtml(ev.location.name) : 'Gaza';
+
+    const sourcesHtml = ev.sources.map((s) => `
+      <li class="sp-source">
+        <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">
+          ${escapeHtml(ORG_LABEL[s.org] ?? s.org)}
+        </a>
+      </li>
+    `).join('');
+
+    el.innerHTML = `
+      <button class="sp-close" aria-label="Close">×</button>
+      <div class="sp-kicker">Displacement event</div>
+      <div class="sp-date">${dateLabel}</div>
+      <div class="sp-location">${placeLabel}</div>
+      <div class="sp-figure">
+        <strong>${escapeHtml(figureLabel)}</strong>
+        <span class="sp-figure-type">${escapeHtml(typeLabel)}</span>
+      </div>
+      <div class="sp-narrative">
+        <p>${escapeHtml(ev.description)}</p>
+      </div>
+      <ul class="sp-sources">${sourcesHtml}</ul>
+    `;
+    el.classList.add('is-open');
+    attachCloseHandler();
+  }
+
   return {
     openIncident: renderIncident,
     openDamage: renderDamage,
+    openDisplacement: renderDisplacement,
     close() {
       el.classList.remove('is-open');
     },
