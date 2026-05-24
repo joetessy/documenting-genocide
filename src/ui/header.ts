@@ -82,7 +82,6 @@ export function mountHeader(
   const el = document.createElement('header');
   el.id = 'header';
   el.innerHTML = `
-    <h1 class="title">The Gaza Exhibit</h1>
     <p class="subtitle">A geographic record of the war on Gaza since Oct 7, 2023.</p>
     <div class="stats">
       <div class="stat"><strong id="stat-incidents">0</strong>Incidents</div>
