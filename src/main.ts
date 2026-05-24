@@ -26,6 +26,7 @@ async function start(): Promise<void> {
   app.appendChild(mapEl);
 
   const map = mountMap(mapEl);
+  mountRotationHint(app);
 
   loading.setStatus('Loading incident data…');
   const { incidents, meta } = await loadIncidents();
@@ -207,6 +208,13 @@ async function start(): Promise<void> {
   window.addEventListener('resize', () => map.resize());
 }
 
+
+function mountRotationHint(parent: HTMLElement): void {
+  const el = document.createElement('div');
+  el.id = 'rotation-hint';
+  el.innerHTML = 'Drag the compass to rotate &amp; tilt, or hold <kbd>Ctrl</kbd> while dragging the map.';
+  parent.appendChild(el);
+}
 
 start().catch((err) => {
   console.error(err);
