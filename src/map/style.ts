@@ -1,22 +1,24 @@
 import type { StyleSpecification, LayerSpecification } from 'maplibre-gl';
 
-// Neutral minimal palette — to match the contemporary off-white UI.
+// Stamen Toner-inspired pen-and-ink palette — pure white "paper",
+// black "ink" for roads/borders/buildings, near-black labels with
+// white halos. High contrast so the red incident markers dominate.
 const COLORS = {
-  paper: '#f7f6f3',          // background / land — matches CSS --bg
-  paperShadow: '#eeece6',
-  water: '#dfe4e8',          // very soft cool grey for the Mediterranean
-  waterDeep: '#c8cfd5',
-  road: '#cfc8b8',
-  roadMajor: '#8a847a',
-  roadCasing: '#6c6760',
-  buildingFlat: '#d8d2c4',
-  buildingLow: '#cec6b3',
-  buildingMid: '#a8a092',
-  buildingHigh: '#7d7568',
-  buildingStroke: '#6c6760',
-  label: '#15140f',
-  labelLight: '#7a766c',
-  border: '#7a766c',
+  paper: '#ffffff',          // background / land — pure white
+  paperShadow: '#f3f3f3',    // very subtle landuse depression (parks, etc.)
+  water: '#ffffff',          // water bodies in white, defined only by their outline
+  waterDeep: '#cccccc',      // thin grey outline for water
+  road: '#1a1a1a',           // near-black for minor roads
+  roadMajor: '#000000',      // pure black for major roads (varies in line-width too)
+  roadCasing: '#000000',     // pure black casing
+  buildingFlat: '#1a1a1a',   // dark grey building silhouettes
+  buildingLow: '#2a2a2a',
+  buildingMid: '#1a1a1a',
+  buildingHigh: '#000000',
+  buildingStroke: '#000000',
+  label: '#000000',          // pure black labels
+  labelLight: '#3a3a3a',     // dark grey for secondary / minor labels
+  border: '#000000',         // pure black for admin borders
 } as const;
 
 // OpenFreeMap serves the openmaptiles vector schema at this URL; we don't use
@@ -103,7 +105,7 @@ const LAYERS: LayerSpecification[] = [
     minzoom: 12,
     paint: {
       'line-color': COLORS.road,
-      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 17, 1.4],
+      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.8, 17, 2.5],
     },
   },
   {
@@ -223,9 +225,9 @@ export function gazaStyle(): StyleSpecification {
     },
     layers: LAYERS,
     sky: {
-      'sky-color': '#e6e9ec',
-      'horizon-color': '#eeece6',
-      'fog-color': '#f7f6f3',
+      'sky-color': '#ffffff',
+      'horizon-color': '#ececec',
+      'fog-color': '#ffffff',
       'fog-ground-blend': 0.6,
       'horizon-fog-blend': 0.85,
       'sky-horizon-blend': 0.6,
