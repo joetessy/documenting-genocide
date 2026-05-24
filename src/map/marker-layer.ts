@@ -66,7 +66,7 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3, 14, 6, 17, 9],
         'circle-color': '#e63946',
-        'circle-stroke-color': '#ffffff',
+        'circle-stroke-color': '#000000',
         'circle-stroke-width': 1.5,
         'circle-opacity': 0.9,
       },
@@ -84,7 +84,7 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 6, 14, 10, 17, 14],
         'circle-color': '#e63946',
-        'circle-stroke-color': '#ffffff',
+        'circle-stroke-color': '#000000',
         'circle-stroke-width': 2,
         'circle-opacity': 1,
       },
