@@ -35,9 +35,10 @@ function buildIncidentCumulative(incidents: Incident[]): Cumulative {
   return { dateStrings: dates, cumCount };
 }
 
-function buildDamageCumulative(features: Array<{ properties?: { assessment_date?: string } }>): DamageCumulative {
+function buildDamageCumulative(features: Array<{ properties?: { assessment_date?: string; status?: string } }>): DamageCumulative {
   const byDate = new Map<string, number>();
   for (const f of features) {
+    if (f.properties?.status !== 'destroyed') continue;
     const d = f.properties?.assessment_date;
     if (!d) continue;
     byDate.set(d, (byDate.get(d) ?? 0) + 1);
@@ -76,7 +77,7 @@ export function mountHeader(
   parent: HTMLElement,
   opts: {
     incidents: Incident[];
-    damageFeatures: Array<{ properties?: { assessment_date?: string } }>;
+    damageFeatures: Array<{ properties?: { assessment_date?: string; status?: string } }>;
   },
 ): HeaderHandle {
   const el = document.createElement('header');
@@ -85,7 +86,7 @@ export function mountHeader(
     <p class="subtitle">A geographic record of the war on Gaza since Oct 7, 2023.</p>
     <div class="stats">
       <div class="stat"><strong id="stat-incidents">0</strong>Incidents</div>
-      <div class="stat"><strong id="stat-damage">0</strong>Buildings</div>
+      <div class="stat"><strong id="stat-damage">0</strong>Buildings destroyed</div>
     </div>
   `;
   parent.appendChild(el);
