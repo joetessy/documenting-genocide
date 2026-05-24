@@ -1,4 +1,4 @@
-import type { Incident, BuildMeta } from '@shared/types';
+import type { Incident, BuildMeta, FacilityRecord } from '@shared/types';
 
 export interface LoadedData {
   incidents: Incident[];
@@ -44,4 +44,10 @@ export async function loadDamage(): Promise<DamageData> {
   const res = await fetch('/data/damage.geojson');
   if (!res.ok) throw new Error(`Failed to load damage.geojson: ${res.status}`);
   return (await res.json()) as DamageData;
+}
+
+export async function loadFacilities(): Promise<FacilityRecord[]> {
+  const res = await fetch('/data/facilities.json');
+  if (!res.ok) throw new Error(`Failed to load facilities.json: ${res.status}`);
+  return (await res.json()) as FacilityRecord[];
 }
