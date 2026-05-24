@@ -2,7 +2,8 @@ import './style.css';
 import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
-import { loadIncidents, loadDamage } from './data/loader';
+import { mountFacilityLayer } from './map/facility-layer';
+import { loadIncidents, loadDamage, loadFacilities } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
 import { bucketByDay, bucketDamageByDay, renderHistogram } from './time/histogram';
@@ -34,6 +35,10 @@ async function start(): Promise<void> {
   const damageData = await loadDamage();
   console.log(`Loaded ${damageData.features.length} damage features`);
 
+  loading.setStatus('Loading facilities…');
+  const facilities = await loadFacilities();
+  console.log(`Loaded ${facilities.length} facilities`);
+
   const header = mountHeader(app, { incidents, damageFeatures: damageData.features });
 
   const markers = mountMarkers(map, incidents);
@@ -43,9 +48,15 @@ async function start(): Promise<void> {
 
   const damage = await mountDamageLayer(map, damageData as unknown as GeoJSON.FeatureCollection);
   damage.setVisible(true);
+
+  const facilityLayer = await mountFacilityLayer(map, facilities);
+  // Default off — facilities are a static reference overlay.
+
   const layerToggle = mountLayerToggle(app);
   layerToggle.onChange((s) => {
     damage.setVisible(s.damage);
+    facilityLayer.setVisible('health', s.health);
+    facilityLayer.setVisible('education', s.education);
     if (map.getLayer('incidents-circles')) {
       map.setLayoutProperty('incidents-circles', 'visibility', s.incidents ? 'visible' : 'none');
     }
@@ -130,9 +141,30 @@ async function start(): Promise<void> {
     map.getCanvas().style.cursor = '';
   });
 
+  const facilityById = new Map(facilities.map((f) => [f.id, f]));
+
+  for (const layerId of ['facilities-health', 'facilities-education']) {
+    map.on('click', layerId, (e) => {
+      if (!e.features || e.features.length === 0) return;
+      const id = e.features[0].properties?.id as string | undefined;
+      if (!id) return;
+      const fac = facilityById.get(id);
+      if (!fac) return;
+      sidePanel.openFacility(fac);
+    });
+
+    map.on('mouseenter', layerId, () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', layerId, () => {
+      map.getCanvas().style.cursor = '';
+    });
+  }
+
   map.on('click', (e) => {
     const hits = map.queryRenderedFeatures(e.point, {
-      layers: ['incidents-circles', 'damage-circles'].filter((l) => map.getLayer(l)),
+      layers: ['incidents-circles', 'damage-circles', 'facilities-health', 'facilities-education']
+        .filter((l) => map.getLayer(l)),
     });
     if (hits.length === 0) {
       sidePanel.close();
