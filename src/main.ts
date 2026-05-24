@@ -89,14 +89,31 @@ async function start(): Promise<void> {
     initialDate: initial.date ?? firstDate,
   });
 
+  // Debounce the URL hash update — Safari rate-limits history.replaceState()
+  // to 100 calls per 10 seconds, and a fast scrubber drag exceeds that in
+  // a second or two. We only need the hash to reflect the *settled* date,
+  // not every intermediate value during a drag.
+  let hashUpdateTimer: ReturnType<typeof setTimeout> | undefined;
+  function scheduleHashUpdate(date: string): void {
+    if (hashUpdateTimer) clearTimeout(hashUpdateTimer);
+    hashUpdateTimer = setTimeout(() => {
+      try {
+        const newHash = formatHash({ date });
+        if (newHash !== location.hash) {
+          history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
+        }
+      } catch {
+        // history APIs can still throw under extreme conditions; the visible
+        // state is correct regardless of whether the URL caught up.
+      }
+    }, 300);
+  }
+
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
     damage.setVisibleDate(date);
     header.updateForDate(date);
-    const newHash = formatHash({ date });
-    if (newHash !== location.hash) {
-      history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
-    }
+    scheduleHashUpdate(date);
   });
   markers.setVisibleDate(timeCtrl.currentDate);
   damage.setVisibleDate(timeCtrl.currentDate);
