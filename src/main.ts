@@ -74,7 +74,7 @@ async function start(): Promise<void> {
     start: firstDate,
     end: lastDate,
     stepDaysPerSecond: 3,
-    initialDate: initial.date ?? lastDate,
+    initialDate: initial.date ?? firstDate,
   });
 
   timeCtrl.onChange((date) => {
