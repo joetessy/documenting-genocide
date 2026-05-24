@@ -22,7 +22,7 @@ export function mountMap(container: HTMLElement): Map {
     style: gazaStyle(),
     center: GAZA_CENTER,
     zoom: 11,
-    pitch: 50,
+    pitch: 0,
     bearing: -15,
     maxBounds: NAV_BOUNDS,
     minZoom: 10,
