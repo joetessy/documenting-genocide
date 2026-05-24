@@ -277,6 +277,17 @@ button { font-family: inherit; }
 #scrubber .date-sub { display: none; }
 
 /* ───────────────────────────────────────────────────────────────────────────
+   Timeline event markers on the histogram
+   ─────────────────────────────────────────────────────────────────────────── */
+.hist-event line {
+  transition: opacity 120ms ease, stroke-width 120ms ease;
+}
+.hist-event:hover line {
+  opacity: 1;
+  stroke-width: 1.2;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
    Side panel
    ─────────────────────────────────────────────────────────────────────────── */
 #side-panel {

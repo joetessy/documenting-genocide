@@ -1,4 +1,5 @@
 import type { Incident } from '@shared/types';
+import type { TimelineEvent } from '../data/timeline-events';
 
 const MS_PER_DAY = 86_400_000;
 
@@ -47,10 +48,16 @@ export function bucketDamageByDay(
 // Render two stacked density series in the histogram host: damage on top (tan,
 // big numbers), incidents below (red, small numbers). Each series uses its own
 // max so both register visually despite the ~1000x scale difference.
+// Optional `events` renders thin vertical markers at major dates; clicking
+// one calls `onEventClick` with the event, which the caller uses to jump the
+// scrubber to that date.
 export function renderHistogram(
   host: HTMLElement,
   incidents: number[],
-  damage?: number[],
+  damage: number[] | undefined,
+  start: string,
+  events?: TimelineEvent[],
+  onEventClick?: (event: TimelineEvent) => void,
 ): void {
   host.innerHTML = '';
   const w = host.clientWidth;
@@ -100,6 +107,51 @@ export function renderHistogram(
     rect.setAttribute('fill', '#c5152c');
     rect.setAttribute('fill-opacity', '0.55');
     svg.appendChild(rect);
+  }
+
+  // Event markers: thin vertical lines at major dates with a wider transparent
+  // hit area for hover and click. A native <title> provides the browser tooltip.
+  if (events && events.length > 0) {
+    const eventGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    eventGroup.setAttribute('class', 'hist-events');
+    for (const ev of events) {
+      const xDays = daysBetween(start, ev.date);
+      if (xDays < 0 || xDays > days) continue;
+
+      const markerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      markerGroup.setAttribute('class', 'hist-event');
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', String(xDays + 0.5));
+      line.setAttribute('y1', '0');
+      line.setAttribute('x2', String(xDays + 0.5));
+      line.setAttribute('y2', String(h));
+      line.setAttribute('stroke', '#e63946');
+      line.setAttribute('stroke-width', '0.5');
+      line.setAttribute('opacity', '0.85');
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hit.setAttribute('x', String(xDays - 1.5));
+      hit.setAttribute('y', '0');
+      hit.setAttribute('width', '3');
+      hit.setAttribute('height', String(h));
+      hit.setAttribute('fill', 'transparent');
+      hit.style.cursor = 'pointer';
+
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = `${ev.date} — ${ev.title}`;
+
+      hit.addEventListener('click', () => {
+        if (onEventClick) onEventClick(ev);
+      });
+
+      markerGroup.appendChild(line);
+      markerGroup.appendChild(hit);
+      markerGroup.appendChild(title);
+      eventGroup.appendChild(markerGroup);
+    }
+    svg.appendChild(eventGroup);
   }
 
   host.appendChild(svg);
