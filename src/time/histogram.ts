@@ -3,6 +3,10 @@ import type { TimelineEvent } from '../data/timeline-events';
 
 const MS_PER_DAY = 86_400_000;
 
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
+}
+
 function daysBetween(start: string, end: string): number {
   const s = new Date(`${start}T00:00:00Z`).getTime();
   const e = new Date(`${end}T00:00:00Z`).getTime();
@@ -60,6 +64,13 @@ export function renderHistogram(
   onEventClick?: (event: TimelineEvent) => void,
 ): void {
   host.innerHTML = '';
+
+  // Custom tooltip for event markers — appears immediately on hover.
+  const tooltip = document.createElement('div');
+  tooltip.className = 'hist-event-tooltip';
+  tooltip.style.display = 'none';
+  host.appendChild(tooltip);
+
   const w = host.clientWidth;
   const h = host.clientHeight;
   const days = Math.max(incidents.length, damage?.length ?? 0);
@@ -139,8 +150,18 @@ export function renderHistogram(
       hit.setAttribute('fill', 'transparent');
       hit.style.cursor = 'pointer';
 
-      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      title.textContent = `${ev.date} — ${ev.title}`;
+      hit.addEventListener('mouseenter', () => {
+        tooltip.innerHTML = `<span class="hist-event-tooltip-date">${ev.date}</span><span class="hist-event-tooltip-title">${escapeHtml(ev.title)}</span>`;
+        tooltip.style.display = 'block';
+        // Position the tooltip horizontally over the marker, anchored to its bottom.
+        // We compute the marker's screen-x by dividing the viewBox-x by the total
+        // days and multiplying by the host width.
+        const xPx = ((xDays + 0.5) / days) * w;
+        tooltip.style.left = `${xPx}px`;
+      });
+      hit.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
 
       hit.addEventListener('click', () => {
         if (onEventClick) onEventClick(ev);
@@ -148,7 +169,6 @@ export function renderHistogram(
 
       markerGroup.appendChild(line);
       markerGroup.appendChild(hit);
-      markerGroup.appendChild(title);
       eventGroup.appendChild(markerGroup);
     }
     svg.appendChild(eventGroup);
