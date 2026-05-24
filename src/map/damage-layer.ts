@@ -11,7 +11,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const VISIBLE_OPACITY = 0.7;
-const TRANSITION_MS = 800;
+const TRANSITION_MS = 300;
 
 export interface DamageLayerHandle {
   setVisible(visible: boolean): void;
