@@ -4,10 +4,10 @@ const SOURCE_ID = 'damage';
 const LAYER_ID = 'damage-circles';
 
 const STATUS_COLORS: Record<string, string> = {
-  destroyed: '#8b1a1a',
-  severe: '#d97706',
-  moderate: '#eab308',
-  possibly_damaged: '#9ca3af',
+  destroyed: '#7a0e0e',         // deep blood red — most damaged, most visible
+  severe: '#a8430b',            // burnt orange / rust — still warm but darker
+  moderate: '#6b5424',           // olive / dark amber — clearly visible on white
+  possibly_damaged: '#5a5a5a',  // medium grey — visible without competing
 };
 
 const VISIBLE_OPACITY = 0.7;
