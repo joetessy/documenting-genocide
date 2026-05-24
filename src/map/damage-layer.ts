@@ -10,6 +10,9 @@ const STATUS_COLORS: Record<string, string> = {
   possibly_damaged: '#9ca3af',
 };
 
+const VISIBLE_OPACITY = 0.7;
+const TRANSITION_MS = 800;
+
 export interface DamageLayerHandle {
   setVisible(visible: boolean): void;
   setVisibleDate(date: string): void;
@@ -23,21 +26,31 @@ export async function mountDamageLayer(
   let pendingVisible = false;
   let layerReady = false;
 
-  function buildFilter(date: string | null): maplibregl.FilterSpecification {
-    return ['<=', ['get', 'assessment_date'], date ?? '1900-01-01'] as unknown as maplibregl.FilterSpecification;
+  function buildOpacityExpr(date: string | null): maplibregl.DataDrivenPropertyValueSpecification<number> {
+    // Features become opaque (0.7) the moment the scrub date crosses their
+    // assessment_date. Because this is a paint-property change rather than a
+    // filter change, MapLibre's circle-opacity-transition kicks in and the
+    // dots fade in/out smoothly over TRANSITION_MS.
+    return [
+      'case',
+      ['<=', ['get', 'assessment_date'], date ?? '1900-01-01'],
+      VISIBLE_OPACITY,
+      0,
+    ] as unknown as maplibregl.DataDrivenPropertyValueSpecification<number>;
   }
 
   let rafScheduled = false;
   function applyState(): void {
-    // Coalesce filter+visibility updates across a frame. 196K features means
-    // every setFilter is expensive — never call it more than once per paint.
+    // Coalesce updates across a frame. With 196K features each
+    // setPaintProperty re-evaluates the expression per feature, so never call
+    // it more than once per paint.
     if (rafScheduled) return;
     rafScheduled = true;
     requestAnimationFrame(() => {
       rafScheduled = false;
       if (!map.getLayer(LAYER_ID)) return;
       map.setLayoutProperty(LAYER_ID, 'visibility', pendingVisible ? 'visible' : 'none');
-      map.setFilter(LAYER_ID, buildFilter(pendingDate));
+      map.setPaintProperty(LAYER_ID, 'circle-opacity', buildOpacityExpr(pendingDate));
     });
   }
 
@@ -49,7 +62,6 @@ export async function mountDamageLayer(
         type: 'circle',
         source: SOURCE_ID,
         layout: { visibility: pendingVisible ? 'visible' : 'none' },
-        filter: buildFilter(pendingDate),
         paint: {
           // Larger radii (above 1px at every zoom) so the GPU doesn't antialias
           // dots into nothing — that was the cause of the "in and out at random"
@@ -72,14 +84,14 @@ export async function mountDamageLayer(
             'possibly_damaged', STATUS_COLORS.possibly_damaged,
             '#888',
           ],
-          'circle-opacity': 0.7,
+          'circle-opacity': buildOpacityExpr(pendingDate),
         },
       },
       'incidents-circles',
     );
     // Apply opacity transition via setPaintProperty (the TS types reject
     // transition keys inside the initial paint block, but the runtime accepts).
-    map.setPaintProperty(LAYER_ID, 'circle-opacity-transition' as never, { duration: 400 } as never);
+    map.setPaintProperty(LAYER_ID, 'circle-opacity-transition' as never, { duration: TRANSITION_MS } as never);
     layerReady = true;
   };
 
