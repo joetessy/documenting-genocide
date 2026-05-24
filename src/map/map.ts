@@ -29,6 +29,10 @@ export function mountMap(container: HTMLElement): Map {
     maxZoom: 18,
     maxPitch: 75,
     attributionControl: false,
+    dragRotate: true,
+    pitchWithRotate: true,
+    touchPitch: true,
+    touchZoomRotate: true,
   });
 
   map.addControl(
