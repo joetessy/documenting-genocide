@@ -6,8 +6,8 @@ import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
 // outside Gaza, but we also keep the camera centered so the user can't lose
 // the strip out of frame.
 const NAV_BOUNDS: [[number, number], [number, number]] = [
-  [34.15, 31.15],
-  [34.65, 31.65],
+  [34.00, 31.00],
+  [34.80, 31.80],
 ];
 
 const GAZA_CENTER: [number, number] = [34.40, 31.42];
@@ -25,7 +25,7 @@ export function mountMap(container: HTMLElement): Map {
     pitch: 0,
     bearing: -15,
     maxBounds: NAV_BOUNDS,
-    minZoom: 10,
+    minZoom: 9,
     maxZoom: 18,
     maxPitch: 75,
     attributionControl: false,
