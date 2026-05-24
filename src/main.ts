@@ -13,6 +13,7 @@ import { mountLoading } from './ui/loading';
 import { mountLayerToggle } from './ui/layer-toggle';
 import { mountHeader } from './ui/header';
 import { parseHash, formatHash } from './url-state';
+import { TIMELINE_EVENTS } from './data/timeline-events';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
@@ -94,7 +95,14 @@ async function start(): Promise<void> {
   const histogramHost = mountScrubber(app, timeCtrl);
   const incidentBuckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
   const damageBuckets = bucketDamageByDay(damageData.features, timeCtrl.start, timeCtrl.end);
-  const drawHistogram = (): void => renderHistogram(histogramHost, incidentBuckets, damageBuckets);
+  const drawHistogram = (): void => renderHistogram(
+    histogramHost,
+    incidentBuckets,
+    damageBuckets,
+    timeCtrl.start,
+    TIMELINE_EVENTS,
+    (ev) => { timeCtrl.setDate(ev.date); },
+  );
   requestAnimationFrame(drawHistogram);
   window.addEventListener('resize', drawHistogram);
 
