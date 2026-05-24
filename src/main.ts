@@ -176,6 +176,20 @@ async function start(): Promise<void> {
     }
   });
 
+  // Lift labels above data overlays for legibility. Keep incident markers
+  // on top so the red dots dominate, and labels read clearly when they
+  // overlap dense data clusters.
+  function lift(): void {
+    for (const id of ['place-neighbourhood', 'place-city', 'incidents-circles', 'incidents-hovered']) {
+      if (map.getLayer(id)) map.moveLayer(id);
+    }
+  }
+  // Data layers are added asynchronously (after the 'load' event for some),
+  // so lift twice — once after load, and once after a short delay as a
+  // belt-and-suspenders.
+  map.once('load', lift);
+  setTimeout(lift, 600);
+
   // Wait for map's first paint before hiding loading. Use 'load' (fires once style
   // is parsed and visible tiles are requested) rather than 'idle' — 'idle' may
   // never fire if any tile request errors.
