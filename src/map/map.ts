@@ -119,14 +119,16 @@ function addGazaMask(map: Map): void {
 // Hide place labels that fall outside Gaza so the cream void isn't broken up
 // by "Sderot" or "Ashkelon" floating in the corner.
 function filterLabelsToGaza(map: Map): void {
+  // Set the filter to the within-expression directly. MapLibre's `within`
+  // operator only works in expression-format filters; combining with the
+  // existing legacy filter throws "within not allowed". Since the goal is
+  // strictly geographic constraint, replacing is fine.
   const gazaPolygon: GeoJSON.Polygon = { type: 'Polygon', coordinates: [GAZA_OUTLINE] };
+  const withinFilter = ['within', gazaPolygon] as unknown as maplibregl.FilterSpecification;
   for (const id of ['place-city', 'place-neighbourhood']) {
     if (map.getLayer(id)) {
       try {
-        const existing = map.getFilter(id) as unknown;
-        const within = ['within', gazaPolygon];
-        const combined = existing ? (['all', existing, within] as unknown) : within;
-        map.setFilter(id, combined as maplibregl.FilterSpecification);
+        map.setFilter(id, withinFilter);
       } catch {
         /* ignore */
       }
