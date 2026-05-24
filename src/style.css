@@ -331,6 +331,13 @@ button { font-family: inherit; }
   margin: 0 0 4px 0;
   letter-spacing: -0.015em;
 }
+#side-panel .sp-name-ar {
+  font-family: 'Newsreader', serif;
+  font-size: 1.1rem;
+  color: var(--ink-2, #6b6b6b);
+  margin: 0.25rem 0 0 0;
+  direction: rtl;
+}
 #side-panel .sp-meta {
   font-family: var(--sans);
   font-size: 12px;
