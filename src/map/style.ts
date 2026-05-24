@@ -11,11 +11,11 @@ const COLORS = {
   road: '#1a1a1a',           // near-black for minor roads
   roadMajor: '#000000',      // pure black for major roads (varies in line-width too)
   roadCasing: '#000000',     // pure black casing
-  buildingFlat: '#1a1a1a',   // dark grey building silhouettes
-  buildingLow: '#2a2a2a',
-  buildingMid: '#1a1a1a',
-  buildingHigh: '#000000',
-  buildingStroke: '#000000',
+  buildingFlat: '#bcbcbc',     // light grey 2D fill (zoomed-in)
+  buildingLow: '#b4b4b4',      // 3D buildings low-floor color
+  buildingMid: '#9c9c9c',      // 3D mid-floor color
+  buildingHigh: '#7a7a7a',     // 3D top-floor color (darker = deeper roof shadow)
+  buildingStroke: '#7a7a7a',   // building outline
   label: '#000000',          // pure black labels
   labelLight: '#3a3a3a',     // dark grey for secondary / minor labels
   border: '#000000',         // pure black for admin borders
