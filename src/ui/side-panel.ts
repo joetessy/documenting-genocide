@@ -1,4 +1,4 @@
-import type { Incident, CredibilityRating, SourceOrg, DamageStatus } from '@shared/types';
+import type { Incident, CredibilityRating, SourceOrg, DamageStatus, FacilityRecord } from '@shared/types';
 import type { DamageFeature } from '../data/loader';
 
 const RATING_LABELS: Record<CredibilityRating, string> = {
@@ -59,6 +59,7 @@ function formatDateShort(iso: string): string {
 export interface SidePanelHandle {
   openIncident(incident: Incident): void;
   openDamage(feature: DamageFeature): void;
+  openFacility(record: FacilityRecord): void;
   close(): void;
 }
 
@@ -200,9 +201,43 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
     attachCloseHandler();
   }
 
+  function renderFacility(fac: FacilityRecord): void {
+    const kicker = fac.category === 'health' ? 'Health facility' : 'Education facility';
+    const subtypeLabel = fac.subtype.replace(/_/g, ' ');
+    const metaParts: string[] = [];
+    metaParts.push(subtypeLabel.charAt(0).toUpperCase() + subtypeLabel.slice(1));
+    if (fac.governorate) metaParts.push(escapeHtml(fac.governorate));
+
+    const nameArHtml = fac.name_ar
+      ? `<div class="sp-name-ar" dir="rtl" lang="ar">${escapeHtml(fac.name_ar)}</div>`
+      : '';
+
+    const sourcesHtml = `<div class="sp-source">
+      <span class="sp-source-org">${escapeHtml(ORG_LABEL[fac.source.org] ?? fac.source.org.toUpperCase())}</span>
+      <a href="${escapeHtml(fac.source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(fac.source.id)}</a>
+    </div>`;
+
+    el.innerHTML = `
+      <button class="sp-close" aria-label="Close panel">✕</button>
+      <div class="sp-body">
+        <div class="sp-cat">${kicker}</div>
+        <h2 class="sp-title">${escapeHtml(fac.name)}</h2>
+        ${nameArHtml}
+        <div class="sp-meta">${metaParts.join(' &middot; ')}</div>
+
+        <div class="sp-sources-label">Source</div>
+        <div class="sp-sources">${sourcesHtml}</div>
+      </div>
+    `;
+    el.classList.add('is-open');
+    el.scrollTop = 0;
+    attachCloseHandler();
+  }
+
   return {
     openIncident: renderIncident,
     openDamage: renderDamage,
+    openFacility: renderFacility,
     close() {
       el.classList.remove('is-open');
     },
