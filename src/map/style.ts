@@ -185,7 +185,8 @@ const LAYERS: LayerSpecification[] = [
     paint: {
       'text-color': COLORS.label,
       'text-halo-color': COLORS.paper,
-      'text-halo-width': 2.5,
+      'text-halo-width': 4,
+      'text-halo-blur': 1.5,
     },
   },
   {
@@ -205,7 +206,8 @@ const LAYERS: LayerSpecification[] = [
     paint: {
       'text-color': COLORS.labelLight,
       'text-halo-color': COLORS.paper,
-      'text-halo-width': 1.8,
+      'text-halo-width': 3,
+      'text-halo-blur': 1,
     },
   },
 ];
