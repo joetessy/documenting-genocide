@@ -174,9 +174,23 @@ async function start(): Promise<void> {
   // Wait for map's first paint before hiding loading. Use 'load' (fires once style
   // is parsed and visible tiles are requested) rather than 'idle' — 'idle' may
   // never fire if any tile request errors.
-  map.once('load', () => loading.destroy());
+  function destroyLoadingAndResize(): void {
+    loading.destroy();
+    // Explicit resize because the canvas is sometimes created at the wrong
+    // height when the loading overlay is still in the layout. Call after the
+    // overlay's opacity transition (~400ms) so the layout has fully settled.
+    requestAnimationFrame(() => map.resize());
+    setTimeout(() => map.resize(), 450);
+  }
+  map.once('load', destroyLoadingAndResize);
   // Safety fallback: hide loading after 8s no matter what.
-  setTimeout(() => loading.destroy(), 8000);
+  setTimeout(destroyLoadingAndResize, 8000);
+
+  // Extra resize on window 'load' (after all images/fonts settle) and on
+  // window resize events. The first is a belt-and-suspenders fix for the
+  // grey-canvas-bottom-half bug some users hit on initial load.
+  window.addEventListener('load', () => map.resize());
+  window.addEventListener('resize', () => map.resize());
 }
 
 start().catch((err) => {
