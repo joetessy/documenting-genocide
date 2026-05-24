@@ -76,7 +76,7 @@ function addGazaMask(map: Map): void {
       paint: {
         'fill-extrusion-color': MASK_COLOR,
         'fill-extrusion-height': 1500,
-        'fill-extrusion-base': -10,
+        'fill-extrusion-base': 0,
         'fill-extrusion-opacity': 1,
         'fill-extrusion-vertical-gradient': false,
       },
