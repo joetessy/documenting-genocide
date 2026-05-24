@@ -3,16 +3,19 @@ import { join } from 'node:path';
 import { fetchAirwars } from './fetch-airwars';
 import { fetchUcdp } from './fetch-ucdp';
 import { fetchOcha } from './fetch-ocha';
+import { fetchOsmFacilities } from './fetch-osm-facilities';
 import { normalizeAirwarsRecord, type AirwarsTaxonomies, type ArticleData } from './normalize-airwars';
 import { normalizeUcdpRecord } from './normalize-ucdp';
 import { normalizeOchaFeature } from './normalize-ocha';
+import { normalizeOsmFacility } from './normalize-osm-facilities';
 import { dedupeIncidents } from './dedupe';
-import type { Incident, BuildMeta, DamageRecord, DamageStatus } from '../shared/types';
+import type { Incident, BuildMeta, DamageRecord, DamageStatus, FacilityRecord } from '../shared/types';
 
 const AIRWARS_RAW = 'data/raw/airwars';
 const ARTICLES_DIR = 'data/raw/airwars/articles';
 const UCDP_RAW = 'data/raw/ucdp';
 const OCHA_RAW = 'data/raw/ocha';
+const OSM_RAW = 'data/raw/osm';
 const OUT_DIR = 'public/data';
 
 async function loadAirwarsPages(): Promise<unknown[]> {
@@ -49,6 +52,19 @@ async function loadUcdpRows(): Promise<unknown[]> {
   } catch { return []; }
 }
 
+async function loadOsmFacilityFeatures(): Promise<GeoJSON.Feature[]> {
+  const out: GeoJSON.Feature[] = [];
+  for (const kind of ['health', 'education']) {
+    try {
+      const fc = JSON.parse(
+        await readFile(join(OSM_RAW, `${kind}.geojson`), 'utf8'),
+      ) as GeoJSON.FeatureCollection;
+      if (fc.features) out.push(...fc.features);
+    } catch { /* missing snapshot — return what we have */ }
+  }
+  return out;
+}
+
 async function loadOchaFeatures(): Promise<GeoJSON.Feature[]> {
   try {
     const fc = JSON.parse(await readFile(join(OCHA_RAW, 'damage.geojson'), 'utf8')) as GeoJSON.FeatureCollection;
@@ -60,6 +76,7 @@ async function main(): Promise<void> {
   await fetchAirwars();
   await fetchUcdp();
   await fetchOcha();
+  await fetchOsmFacilities();
 
   const airwarsRaws = await loadAirwarsPages();
   const taxonomies = await loadTaxonomies();
@@ -164,12 +181,31 @@ async function main(): Promise<void> {
   await writeFile(join(OUT_DIR, 'damage.geojson'), JSON.stringify(damageFc));
   console.log(`Wrote ${damageInConflict.length} damage records to ${OUT_DIR}/damage.geojson`);
 
+  const osmFeatures = await loadOsmFacilityFeatures();
+  console.log(`Loaded ${osmFeatures.length} OSM facility features`);
+  const facilities: FacilityRecord[] = [];
+  let osmDropped = 0;
+  for (const feat of osmFeatures) {
+    const fac = normalizeOsmFacility(feat);
+    if (fac) facilities.push(fac);
+    else osmDropped++;
+  }
+  console.log(`Normalized ${facilities.length} facilities (${osmDropped} dropped — non-Gaza, polygons, unnamed, etc.)`);
+
+  await writeFile(join(OUT_DIR, 'facilities.json'), JSON.stringify(facilities));
+  console.log(`Wrote ${facilities.length} facilities to ${OUT_DIR}/facilities.json`);
+
   const meta: BuildMeta = {
     build_date: new Date().toISOString(),
-    source_counts: { airwars: airwarsIncidents.length, ucdp: ucdpIncidents.length },
+    source_counts: {
+      airwars: airwarsIncidents.length,
+      ucdp: ucdpIncidents.length,
+      osm: facilities.length,
+    },
     dedup_merges: merges,
     unplotted_count: airwarsUnplotted + ucdpUnplotted,
     damage_count: damageInConflict.length,
+    facility_count: facilities.length,
   };
   await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
 
