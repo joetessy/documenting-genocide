@@ -8,7 +8,6 @@ interface Cumulative {
   // Parallel arrays: dateStrings[i] is the ISO date, counts[i] is cumulative count through that date.
   dateStrings: string[];
   cumCount: number[];
-  cumKilled: number[];
 }
 
 interface DamageCumulative {
@@ -21,27 +20,19 @@ interface DamageCumulative {
  * O(n log n) once; on every scrubber tick we do a binary search lookup which is O(log n).
  */
 function buildIncidentCumulative(incidents: Incident[]): Cumulative {
-  // Group casualties + counts per date.
-  const byDate = new Map<string, { count: number; killed: number }>();
+  // Group counts per date.
+  const byDate = new Map<string, number>();
   for (const inc of incidents) {
-    const cur = byDate.get(inc.date) ?? { count: 0, killed: 0 };
-    cur.count += 1;
-    if (inc.casualties.killed !== null) cur.killed += inc.casualties.killed;
-    byDate.set(inc.date, cur);
+    byDate.set(inc.date, (byDate.get(inc.date) ?? 0) + 1);
   }
   const dates = [...byDate.keys()].sort();
   const cumCount: number[] = [];
-  const cumKilled: number[] = [];
   let cc = 0;
-  let ck = 0;
   for (const d of dates) {
-    const v = byDate.get(d)!;
-    cc += v.count;
-    ck += v.killed;
+    cc += byDate.get(d)!;
     cumCount.push(cc);
-    cumKilled.push(ck);
   }
-  return { dateStrings: dates, cumCount, cumKilled };
+  return { dateStrings: dates, cumCount };
 }
 
 function buildDamageCumulative(features: Array<{ properties?: { assessment_date?: string } }>): DamageCumulative {
@@ -96,7 +87,6 @@ export function mountHeader(
     <div class="stats">
       <div class="stat"><strong id="stat-incidents">0</strong>Incidents</div>
       <div class="stat"><strong id="stat-damage">0</strong>Buildings</div>
-      <div class="stat"><strong id="stat-killed">0</strong>Killed</div>
     </div>
   `;
   parent.appendChild(el);
@@ -106,16 +96,13 @@ export function mountHeader(
 
   const elIncidents = el.querySelector<HTMLElement>('#stat-incidents')!;
   const elDamage = el.querySelector<HTMLElement>('#stat-damage')!;
-  const elKilled = el.querySelector<HTMLElement>('#stat-killed')!;
 
   return {
     updateForDate(date: string) {
       const inc = lookupCum(incidentCum.dateStrings, incidentCum.cumCount, date);
-      const killed = lookupCum(incidentCum.dateStrings, incidentCum.cumKilled, date);
       const dam = lookupCum(damageCum.dateStrings, damageCum.cumCount, date);
       elIncidents.textContent = fmt.format(inc);
       elDamage.textContent = fmt.format(dam);
-      elKilled.textContent = fmt.format(killed);
     },
   };
 }
