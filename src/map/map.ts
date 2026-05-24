@@ -1,4 +1,4 @@
-import maplibregl, { Map } from 'maplibre-gl';
+import maplibregl, { Map, AttributionControl, NavigationControl } from 'maplibre-gl';
 import { gazaStyle } from './style';
 import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
 
@@ -31,9 +31,16 @@ export function mountMap(container: HTMLElement): Map {
     attributionControl: false,
   });
 
-  map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
   map.addControl(
-    new maplibregl.AttributionControl({
+    new NavigationControl({
+      visualizePitch: true,
+      showCompass: true,
+      showZoom: true,
+    }),
+    'top-right',
+  );
+  map.addControl(
+    new AttributionControl({
       compact: true,
       customAttribution:
         '<a href="https://airwars.org">Airwars</a> &middot; ' +
