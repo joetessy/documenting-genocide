@@ -27,6 +27,11 @@ async function start(): Promise<void> {
 
   const map = mountMap(mapEl);
 
+  // Custom 3D/2D toggle. The NavigationControl compass resets pitch to 0
+  // but can't restore the previous tilt — this button gives users a
+  // discoverable single-click way to flip between flat and tilted views.
+  mountPitchToggle(app, map);
+
   loading.setStatus('Loading incident data…');
   const { incidents, meta } = await loadIncidents();
   console.log(`Loaded ${incidents.length} incidents (${meta.unplotted_count} unplotted), build ${meta.build_date}`);
@@ -191,6 +196,38 @@ async function start(): Promise<void> {
   // grey-canvas-bottom-half bug some users hit on initial load.
   window.addEventListener('load', () => map.resize());
   window.addEventListener('resize', () => map.resize());
+}
+
+function mountPitchToggle(parent: HTMLElement, map: import('maplibre-gl').Map): void {
+  const DEFAULT_TILT = 50;
+  let rememberedTilt = DEFAULT_TILT;
+
+  const btn = document.createElement('button');
+  btn.id = 'pitch-toggle';
+  btn.type = 'button';
+  btn.textContent = '3D';
+  btn.setAttribute('aria-label', 'Toggle 3D view');
+  parent.appendChild(btn);
+
+  function render(): void {
+    const isFlat = map.getPitch() < 1;
+    btn.textContent = isFlat ? '3D' : '2D';
+  }
+
+  btn.addEventListener('click', () => {
+    const isFlat = map.getPitch() < 1;
+    if (isFlat) {
+      map.easeTo({ pitch: rememberedTilt, duration: 300 });
+    } else {
+      rememberedTilt = map.getPitch();
+      map.easeTo({ pitch: 0, duration: 300 });
+    }
+    setTimeout(render, 350);
+  });
+
+  // Keep the label in sync when the user tilts via gestures or NavControl.
+  map.on('pitchend', render);
+  render();
 }
 
 start().catch((err) => {

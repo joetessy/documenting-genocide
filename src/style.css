@@ -624,3 +624,31 @@ button { font-family: inherit; }
   padding: 1px 6px !important;
 }
 .maplibregl-ctrl-attrib a { color: var(--ink-3) !important; }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   3D / 2D pitch toggle
+   ─────────────────────────────────────────────────────────────────────────── */
+#pitch-toggle {
+  position: absolute;
+  top: 22px;
+  right: 78px;     /* sits to the left of the NavigationControl which is in top-right */
+  z-index: 12;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--hairline-strong, #d0d0d0);
+  border-radius: 4px;
+  width: 44px;
+  height: 30px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1, #111);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 120ms ease;
+}
+#pitch-toggle:hover {
+  background: rgba(255, 255, 255, 1);
+}
+#pitch-toggle:active {
+  background: rgba(240, 240, 240, 1);
+}
