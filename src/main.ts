@@ -12,6 +12,7 @@ import { mountSidePanel } from './ui/side-panel';
 import { mountLoading } from './ui/loading';
 import { mountLayerToggle } from './ui/layer-toggle';
 import { mountHeader } from './ui/header';
+import { mountAboutModal } from './ui/about-modal';
 import { parseHash, formatHash } from './url-state';
 import { TIMELINE_EVENTS } from './data/timeline-events';
 
@@ -28,6 +29,15 @@ async function start(): Promise<void> {
 
   const map = mountMap(mapEl);
   mountRotationHint(app);
+
+  const aboutModal = mountAboutModal(app);
+  const aboutBtn = document.createElement('button');
+  aboutBtn.id = 'about-trigger';
+  aboutBtn.type = 'button';
+  aboutBtn.textContent = 'About';
+  aboutBtn.setAttribute('aria-label', 'About this exhibit');
+  aboutBtn.addEventListener('click', () => aboutModal.open());
+  app.appendChild(aboutBtn);
 
   loading.setStatus('Loading incident data…');
   const { incidents, meta } = await loadIncidents();

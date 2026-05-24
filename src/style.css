@@ -678,3 +678,192 @@ button { font-family: inherit; }
   vertical-align: 1px;
 }
 
+/* ───────────────────────────────────────────────────────────────────────────
+   About modal + trigger
+   ─────────────────────────────────────────────────────────────────────────── */
+#about-trigger {
+  position: absolute;
+  bottom: 22px;
+  left: 22px;
+  z-index: 12;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--hairline-strong, #d0d0d0);
+  border-radius: 5px;
+  padding: 7px 12px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-1, #111);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 120ms ease;
+}
+#about-trigger:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+#about-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 12, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+#about-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#about-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -45%);
+  width: min(640px, calc(100vw - 48px));
+  max-height: calc(100vh - 80px);
+  background: #ffffff;
+  border: 1px solid var(--hairline-strong, #d0d0d0);
+  border-radius: 8px;
+  box-shadow: 0 18px 60px rgba(20, 18, 12, 0.18), 0 2px 8px rgba(20, 18, 12, 0.08);
+  z-index: 201;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease;
+  overflow: hidden;
+}
+#about-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+
+#about-modal .about-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3, #555);
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: background 120ms ease, color 120ms ease;
+  z-index: 1;
+}
+#about-modal .about-close:hover {
+  background: rgba(20, 18, 12, 0.05);
+  color: var(--ink-1, #111);
+}
+
+#about-modal .about-body {
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+  padding: 32px 36px 36px;
+  scroll-behavior: smooth;
+}
+
+#about-modal #about-title {
+  font-family: var(--serif, Georgia, serif);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--ink-1, #111);
+  letter-spacing: -0.015em;
+  margin: 0 0 22px;
+}
+
+#about-modal .about-section {
+  margin-bottom: 28px;
+}
+
+#about-modal .about-section h2 {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3, #555);
+  margin: 0 0 12px;
+}
+
+#about-modal .about-section p {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink-2, #333);
+  margin: 0 0 12px;
+}
+
+#about-modal .about-section ul {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink-2, #333);
+  padding-left: 18px;
+  margin: 0;
+}
+
+#about-modal .about-section ul li {
+  margin-bottom: 8px;
+}
+
+#about-modal .about-section-intro {
+  color: var(--ink-3, #555);
+  font-size: 12.5px;
+  margin-bottom: 18px;
+}
+
+#about-modal .about-source {
+  background: rgba(247, 246, 243, 0.6);
+  border: 1px solid var(--hairline, #e5e5e5);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+#about-modal .about-source-name {
+  margin: 0 0 6px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-1, #111);
+}
+
+#about-modal .about-source-name a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--hairline-strong, #d0d0d0);
+}
+#about-modal .about-source-name a:hover {
+  border-bottom-color: var(--accent, #d3091e);
+  color: var(--accent, #d3091e);
+}
+
+#about-modal .about-source-desc {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2, #333);
+  margin: 0 0 8px;
+}
+
+#about-modal .about-source-meta {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-3, #555);
+  margin: 0 0 4px;
+}
+
+#about-modal .about-source-meta strong {
+  color: var(--ink-2, #333);
+  font-weight: 600;
+}
+
