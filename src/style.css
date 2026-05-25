@@ -225,6 +225,11 @@ button { font-family: inherit; }
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Sits above the slider input (z-index: 2) so the event-marker hit-rects
+     (pointer-events: auto) capture mouseenter. The host itself stays
+     pointer-events: none so the slider underneath is still draggable
+     everywhere except directly on a marker. */
+  z-index: 3;
 }
 #scrubber input[type="range"] {
   width: 100%;
