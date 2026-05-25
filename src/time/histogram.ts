@@ -151,7 +151,7 @@ export function renderHistogram(
       hit.style.cursor = 'pointer';
 
       hit.addEventListener('mouseenter', () => {
-        tooltip.innerHTML = `<span class="hist-event-tooltip-date">${ev.date}</span><span class="hist-event-tooltip-title">${escapeHtml(ev.title)}</span>`;
+        tooltip.innerHTML = `<span class="hist-event-tooltip-date">${ev.date}</span><span class="hist-event-tooltip-title">${escapeHtml(ev.title)}</span><span class="hist-event-tooltip-desc">${escapeHtml(ev.description)}</span>`;
         tooltip.style.display = 'block';
         // Position the tooltip horizontally over the marker, anchored to its bottom.
         // We compute the marker's screen-x by dividing the viewBox-x by the total
