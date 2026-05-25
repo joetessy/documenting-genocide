@@ -24,6 +24,18 @@ describe('TIMELINE_EVENTS', () => {
     }
   });
 
+  it('every event has a non-empty description', () => {
+    for (const e of TIMELINE_EVENTS) {
+      expect(e.description.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('descriptions are short enough to fit a tooltip (under 220 chars)', () => {
+    for (const e of TIMELINE_EVENTS) {
+      expect(e.description.length).toBeLessThanOrEqual(220);
+    }
+  });
+
   it('events are in chronological order', () => {
     for (let i = 1; i < TIMELINE_EVENTS.length; i++) {
       expect(TIMELINE_EVENTS[i].date >= TIMELINE_EVENTS[i - 1].date).toBe(true);
