@@ -121,13 +121,12 @@ export function mountAboutModal(parent: HTMLElement): AboutModalHandle {
   modal.innerHTML = `
     <button class="about-close" aria-label="Close about panel">✕</button>
     <div class="about-body">
-      <h2 id="about-title">About this exhibit</h2>
+      <h2 id="about-title">About</h2>
 
       <section class="about-section">
         <p>
-          This is an interactive geographic record of the war on Gaza since October 7, 2023. Every marker on
-          the map is backed by a verifiable source. The exhibit is independent, non-commercial, and educational —
-          built by a single developer over the course of the war. No ads, no paywall, no resale of data.
+          This is an interactive geographic record of the Genocide on Gaza since October 7, 2023. Every marker on
+          the map is backed by a verifiable source. The map is independent, non-commercial, and educational.
         </p>
         <p>
           Visitors scrub the timeline to watch incidents and structural damage accumulate day by day, or click

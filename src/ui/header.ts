@@ -112,8 +112,7 @@ export function mountHeader(
   const el = document.createElement('header');
   el.id = 'header';
   el.innerHTML = `
-    <p class="subtitle">A geographic record of the war on Gaza since Oct 7, 2023.</p>
-    <div class="day-counter"><span id="day-n">Day 1</span></div>
+    <h1 class="day-header" id="day-header">— days since Oct 7</h1>
     <div class="stats">
       <div class="stat"><strong id="stat-killed" title="Cumulative deaths reported by the Gaza Ministry of Health, aggregated by Tech for Palestine.">0</strong>Killed (MoH)</div>
       <div class="stat"><strong id="stat-incidents">0</strong>Incidents</div>
@@ -129,7 +128,7 @@ export function mountHeader(
   const elKilled = el.querySelector<HTMLElement>('#stat-killed')!;
   const elIncidents = el.querySelector<HTMLElement>('#stat-incidents')!;
   const elDamage = el.querySelector<HTMLElement>('#stat-damage')!;
-  const elDayN = el.querySelector<HTMLElement>('#day-n')!;
+  const elDayHeader = el.querySelector<HTMLElement>('#day-header')!;
 
   return {
     updateForDate(date: string) {
@@ -143,11 +142,17 @@ export function mountHeader(
       elIncidents.textContent = fmt.format(inc);
       elDamage.textContent = fmt.format(dam);
 
-      // Oct 7 2023 is Day 1 (inclusive), so add 1 to the day delta. When the
-      // scrubber lands before Oct 7 (the initial empty state at Oct 6),
-      // render "Day –" to communicate the war has not started yet.
+      // Oct 7 2023 is Day 1 (inclusive), so add 1 to the day delta. Pluralize:
+      // "1 day" vs "N days". Pre-war (scrubber before Oct 7) gets an em-dash
+      // to communicate the war has not started yet.
       const daysSinceStart = daysBetween(CONFLICT_START, date) + 1;
-      elDayN.textContent = daysSinceStart >= 1 ? `Day ${daysSinceStart}` : 'Day –';
+      if (daysSinceStart < 1) {
+        elDayHeader.textContent = '— days since Oct 7';
+      } else if (daysSinceStart === 1) {
+        elDayHeader.textContent = '1 day since Oct 7';
+      } else {
+        elDayHeader.textContent = `${fmt.format(daysSinceStart)} days since Oct 7`;
+      }
     },
   };
 }

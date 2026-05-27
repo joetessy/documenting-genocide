@@ -6,8 +6,8 @@ function daysBetween(start: string, end: string): number {
   return Math.round((e - s) / 86_400_000);
 }
 
-const ICON_PLAY = '▶';
-const ICON_PAUSE = '❚❚';
+const ICON_PLAY = '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"><polygon points="2,1 2,9 9,5" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true"><rect x="2" y="1.5" width="2" height="7" fill="currentColor"/><rect x="6" y="1.5" width="2" height="7" fill="currentColor"/></svg>';
 
 export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLElement {
   const container = document.createElement('div');
@@ -15,7 +15,7 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
 
   const playBtn = document.createElement('button');
   playBtn.className = 'play-btn';
-  playBtn.textContent = ICON_PLAY;
+  playBtn.innerHTML = ICON_PLAY;
   playBtn.setAttribute('aria-label', 'Play timeline');
 
   const trackWrap = document.createElement('div');
@@ -50,11 +50,11 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
 
   function updatePlayBtn(): void {
     if (ctrl.isPlaying) {
-      playBtn.textContent = ICON_PAUSE;
+      playBtn.innerHTML = ICON_PAUSE;
       playBtn.classList.add('is-playing');
       playBtn.setAttribute('aria-label', 'Pause timeline');
     } else {
-      playBtn.textContent = ICON_PLAY;
+      playBtn.innerHTML = ICON_PLAY;
       playBtn.classList.remove('is-playing');
       playBtn.setAttribute('aria-label', 'Play timeline');
     }

@@ -256,7 +256,40 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
 
   function renderTimelineEvent(ev: TimelineEvent, indexLabel?: string): void {
     const dateLabel = formatDate(ev.date);
-    const kicker = indexLabel ?? 'Timeline event';
+    const kicker = indexLabel ?? 'Major event';
+
+    const casualtiesHtml = ev.casualties
+      ? `
+        <div class="sp-casualties">
+          ${ev.casualties.killed != null ? `
+            <div class="sp-casualty">
+              <div class="sp-casualty-n is-killed">${formatN(ev.casualties.killed)}</div>
+              <div class="sp-casualty-label">Killed</div>
+            </div>
+          ` : ''}
+          ${ev.casualties.injured != null ? `
+            <div class="sp-casualty">
+              <div class="sp-casualty-n">${formatN(ev.casualties.injured)}</div>
+              <div class="sp-casualty-label">Injured</div>
+            </div>
+          ` : ''}
+        </div>
+      `
+      : '';
+
+    const sourcesHtml = ev.sources && ev.sources.length > 0
+      ? `
+        <div class="sp-sources-label">Sources</div>
+        <div class="sp-sources">
+          ${ev.sources.map((s) => `
+            <div class="sp-source">
+              <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.name)}</a>
+            </div>
+          `).join('')}
+        </div>
+      `
+      : '';
+
     el.innerHTML = `
       <button class="sp-close" aria-label="Close panel">✕</button>
       <div class="sp-body">
@@ -264,9 +297,13 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
         <h2 class="sp-title">${escapeHtml(ev.title)}</h2>
         <div class="sp-meta">${dateLabel}</div>
 
+        ${casualtiesHtml}
+
         <div class="sp-desc">
           <p>${escapeHtml(ev.description)}</p>
         </div>
+
+        ${sourcesHtml}
       </div>
     `;
     el.classList.add('is-open');

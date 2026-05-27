@@ -10,9 +10,9 @@ export interface TourControllerOpts {
   events: TimelineEvent[];
   timeCtrl: TimeController;
   narrator: TourNarrator;
-  // Move the map camera. Receives the event's focus (lat/lon/zoom) or `null`
-  // for "reset to the default Gaza-wide view".
-  cameraEaseTo: (target: { lat: number; lon: number; zoom?: number } | null) => void;
+  // Move the map camera. Receives the event's focus (lat/lon + optional
+  // zoom/pitch/bearing) or `null` for "reset to the default Gaza-wide view".
+  cameraEaseTo: (target: { lat: number; lon: number; zoom?: number; pitch?: number; bearing?: number } | null) => void;
   // Show or hide the pulsing landmark ring at the focused location. Called
   // with the focus point at each tour stop, and with `null` on stop / end.
   highlightLandmark: (target: { lat: number; lon: number } | null) => void;
@@ -24,7 +24,7 @@ export class TourController {
   private events: TimelineEvent[];
   private timeCtrl: TimeController;
   private narrator: TourNarrator;
-  private cameraEaseTo: (target: { lat: number; lon: number; zoom?: number } | null) => void;
+  private cameraEaseTo: (target: { lat: number; lon: number; zoom?: number; pitch?: number; bearing?: number } | null) => void;
   private highlightLandmark: (target: { lat: number; lon: number } | null) => void;
   private perEventMs: number;
   private onStateChange?: (isPlaying: boolean) => void;

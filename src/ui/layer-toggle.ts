@@ -33,18 +33,71 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
   ).join('');
 
   el.innerHTML = `
-    <div class="lt-heading">Layers</div>
-    <div class="lt-group">
+    <button type="button" class="lt-heading" id="lt-collapse" aria-expanded="true" aria-controls="lt-body">
+      <span class="lt-heading-label">Layers &amp; legend</span>
+      <span class="lt-heading-caret" aria-hidden="true">▾</span>
+    </button>
+
+    <div class="lt-body" id="lt-body">
+      <div class="lt-group">
+        <label class="lt-row">
+          <input type="checkbox" id="toggle-incidents" checked />
+          <span class="lt-swatch lt-swatch-incidents" aria-hidden="true"></span>
+          <span class="lt-label">Incidents</span>
+          <button type="button" class="lt-disclosure" id="incidents-disclosure" aria-label="Toggle incident type filters" aria-expanded="false">▾</button>
+        </label>
+        <div class="lt-tier-block" aria-label="Marker size by people killed">
+          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-1"></span><span class="lt-tier-num">&lt;10</span></div>
+          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-2"></span><span class="lt-tier-num">10–49</span></div>
+          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-3"></span><span class="lt-tier-num">50–99</span></div>
+          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-4"></span><span class="lt-tier-num">100+</span></div>
+        </div>
+        <div class="lt-detail" id="incident-cats" hidden>
+          <div class="lt-detail-title">By type</div>
+          ${catRows}
+        </div>
+      </div>
+
+      <div class="lt-group">
+        <label class="lt-row">
+          <input type="checkbox" id="toggle-damage" checked />
+          <span class="lt-swatch lt-swatch-damage" aria-hidden="true"></span>
+          <span class="lt-label">Damaged buildings</span>
+          <button type="button" class="lt-disclosure" id="damage-disclosure" aria-label="Toggle damage palette" aria-expanded="false">▾</button>
+        </label>
+        <div class="lt-detail" id="damage-detail" hidden>
+          <div class="lt-status-row"><span class="lt-status-dot" style="background:#7a0e0e"></span><span>Destroyed</span></div>
+          <div class="lt-status-row"><span class="lt-status-dot" style="background:#c2470d"></span><span>Severely damaged</span></div>
+          <div class="lt-status-row"><span class="lt-status-dot" style="background:#856416"></span><span>Moderately damaged</span></div>
+          <div class="lt-status-row"><span class="lt-status-dot" style="background:#4a4a4a"></span><span>Possibly damaged</span></div>
+        </div>
+      </div>
+
       <label class="lt-row">
-        <input type="checkbox" id="toggle-incidents" checked />
-        <span>Incidents</span>
-        <button type="button" class="lt-disclosure" id="incidents-disclosure" aria-label="Toggle category filter" aria-expanded="false">▾</button>
+        <input type="checkbox" id="toggle-health" checked />
+        <span class="lt-swatch lt-swatch-health" aria-hidden="true"></span>
+        <span class="lt-label">Health facilities</span>
       </label>
-      <div class="lt-subrows" id="incident-cats" hidden>${catRows}</div>
+      <label class="lt-row">
+        <input type="checkbox" id="toggle-education" checked />
+        <span class="lt-swatch lt-swatch-education" aria-hidden="true"></span>
+        <span class="lt-label">Education facilities</span>
+      </label>
+
+      <div class="lt-footnote">
+        <span class="lt-tick" aria-hidden="true"></span>
+        <span>Major event marker (on timeline)</span>
+      </div>
+
+      <div class="lt-controls">
+        <div class="lt-controls-title">Controls</div>
+        <ul class="lt-controls-list">
+          <li><span class="lt-controls-key">Drag</span> to pan</li>
+          <li><span class="lt-controls-key">Scroll</span> to zoom</li>
+          <li><span class="lt-controls-key">Ctrl + drag</span> to rotate / tilt</li>
+        </ul>
+      </div>
     </div>
-    <label class="lt-row"><input type="checkbox" id="toggle-damage" checked /><span>Damaged buildings</span></label>
-    <label class="lt-row"><input type="checkbox" id="toggle-health" /><span>Health facilities</span></label>
-    <label class="lt-row"><input type="checkbox" id="toggle-education" /><span>Education facilities</span></label>
   `;
   parent.appendChild(el);
 
@@ -52,8 +105,8 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
   const state: LayerToggleState = {
     incidents: true,
     damage: true,
-    health: false,
-    education: false,
+    health: true,
+    education: true,
     incidentCategories: {
       airstrike: true,
       shelling: true,
@@ -72,8 +125,10 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
   const damageBox = el.querySelector<HTMLInputElement>('#toggle-damage')!;
   const healthBox = el.querySelector<HTMLInputElement>('#toggle-health')!;
   const educationBox = el.querySelector<HTMLInputElement>('#toggle-education')!;
-  const disclosure = el.querySelector<HTMLButtonElement>('#incidents-disclosure')!;
-  const subrowsEl = el.querySelector<HTMLDivElement>('#incident-cats')!;
+  const incidentsDisclosure = el.querySelector<HTMLButtonElement>('#incidents-disclosure')!;
+  const incidentsDetail = el.querySelector<HTMLDivElement>('#incident-cats')!;
+  const damageDisclosure = el.querySelector<HTMLButtonElement>('#damage-disclosure')!;
+  const damageDetail = el.querySelector<HTMLDivElement>('#damage-detail')!;
 
   incidentsBox.addEventListener('change', () => { state.incidents = incidentsBox.checked; notify(); });
   damageBox.addEventListener('change', () => { state.damage = damageBox.checked; notify(); });
@@ -88,12 +143,28 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
     });
   }
 
-  disclosure.addEventListener('click', (e) => {
-    e.preventDefault();
-    const isOpen = subrowsEl.hidden === false;
-    subrowsEl.hidden = isOpen;
-    disclosure.setAttribute('aria-expanded', String(!isOpen));
-    disclosure.textContent = isOpen ? '▾' : '▴';
+  function wireDisclosure(btn: HTMLButtonElement, panel: HTMLDivElement): void {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isOpen = panel.hidden === false;
+      panel.hidden = isOpen;
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      btn.textContent = isOpen ? '▾' : '▴';
+    });
+  }
+  wireDisclosure(incidentsDisclosure, incidentsDetail);
+  wireDisclosure(damageDisclosure, damageDetail);
+
+  // Collapse the whole panel to just the heading when the user clicks it.
+  const collapseBtn = el.querySelector<HTMLButtonElement>('#lt-collapse')!;
+  const body = el.querySelector<HTMLDivElement>('#lt-body')!;
+  const caret = collapseBtn.querySelector<HTMLSpanElement>('.lt-heading-caret')!;
+  collapseBtn.addEventListener('click', () => {
+    const isOpen = !el.classList.contains('is-collapsed');
+    el.classList.toggle('is-collapsed', isOpen);
+    collapseBtn.setAttribute('aria-expanded', String(!isOpen));
+    body.hidden = isOpen;
+    caret.textContent = isOpen ? '▸' : '▾';
   });
 
   return {
