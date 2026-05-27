@@ -75,8 +75,16 @@ export function mountTimelineEventLayer(map: Map, events: TimelineEvent[]): Time
     applyFilter();
   };
 
-  if (map.isStyleLoaded()) addLayer();
-  else map.once('load', addLayer);
+  // See damage-layer.ts for the rationale on this pattern.
+  let added = false;
+  const tryAdd = (): void => {
+    if (added || !map.isStyleLoaded()) return;
+    added = true;
+    map.off('idle', tryAdd);
+    addLayer();
+  };
+  if (map.isStyleLoaded()) tryAdd();
+  else map.on('idle', tryAdd);
 
   return {
     setVisibleDate(date) {

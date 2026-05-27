@@ -80,17 +80,18 @@ export async function mountDamageLayer(
 
   // map.once('load', ...) is one-shot — if 'load' already fired by the time
   // we get here (data fetches can outlast the basemap load), the callback
-  // would never run. Listen on 'styledata' too as a recurring signal and
-  // guard with `added` to avoid double-adding the source/layer.
+  // would never run. Use 'idle', which fires whenever the map settles and
+  // re-fires after every source/layer add, so we'll always catch a moment
+  // when isStyleLoaded() is true. Guard with `added` to avoid duplicates.
   let added = false;
   const tryAdd = (): void => {
     if (added || !map.isStyleLoaded()) return;
     added = true;
-    map.off('styledata', tryAdd);
+    map.off('idle', tryAdd);
     addLayer();
   };
   if (map.isStyleLoaded()) tryAdd();
-  else { map.on('styledata', tryAdd); map.once('load', tryAdd); }
+  else map.on('idle', tryAdd);
 
   return {
     setVisible(visible) {

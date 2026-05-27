@@ -118,8 +118,16 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
     layerReady = true;
   }
 
-  if (map.isStyleLoaded()) addSourcesAndLayers();
-  else map.once('load', addSourcesAndLayers);
+  // See damage-layer.ts for the rationale on this pattern.
+  let added = false;
+  const tryAdd = (): void => {
+    if (added || !map.isStyleLoaded()) return;
+    added = true;
+    map.off('idle', tryAdd);
+    addSourcesAndLayers();
+  };
+  if (map.isStyleLoaded()) tryAdd();
+  else map.on('idle', tryAdd);
 
   return {
     setVisibleDate(date: string): void {
