@@ -90,18 +90,32 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
     const children = incident.casualties.killed_children;
     const women = incident.casualties.killed_women;
 
-    const sourcesHtml = incident.sources
-      .map((s) => {
-        const rating = s.rating
-          ? `<span class="sp-rating sp-rating-${s.rating}">${RATING_LABELS[s.rating]}</span>`
-          : '';
-        return `<div class="sp-source">
-          <span class="sp-source-org">${ORG_LABEL[s.org] ?? s.org.toUpperCase()}</span>
-          <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.id)}</a>
-          ${rating}
-        </div>`;
-      })
-      .join('');
+    // Group sources by org:id so e.g. five CIR URLs for the same IPIN
+    // render as one row with five numbered links, not five identical rows.
+    const sourceGroups = new Map<string, typeof incident.sources>();
+    for (const s of incident.sources) {
+      const key = `${s.org}:${s.id}`;
+      const arr = sourceGroups.get(key) ?? [];
+      arr.push(s);
+      sourceGroups.set(key, arr);
+    }
+
+    const sourcesHtml = Array.from(sourceGroups.values()).map((group) => {
+      const first = group[0];
+      const orgLabel = ORG_LABEL[first.org] ?? first.org.toUpperCase();
+      const rating = first.rating
+        ? `<span class="sp-rating sp-rating-${first.rating}">${RATING_LABELS[first.rating]}</span>`
+        : '';
+      const links = group.length === 1
+        ? `<a href="${escapeHtml(first.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(first.id)}</a>`
+        : `<span class="sp-source-id">${escapeHtml(first.id)}</span>` +
+          group.map((s, idx) => `<a class="sp-source-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${idx + 1}</a>`).join('');
+      return `<div class="sp-source">
+        <span class="sp-source-org">${orgLabel}</span>
+        ${links}
+        ${rating}
+      </div>`;
+    }).join('');
 
     const demoBits: string[] = [];
     if (children !== null && children > 0) demoBits.push(`${children} ${children === 1 ? 'child' : 'children'}`);
@@ -133,7 +147,7 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
           ${incident.description.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}
         </div>
 
-        <div class="sp-sources-label">Sources (${incident.sources.length})</div>
+        <div class="sp-sources-label">Sources (${sourceGroups.size})</div>
         <div class="sp-sources">${sourcesHtml}</div>
       </div>
     `;
