@@ -157,6 +157,15 @@ export function mountAboutModal(parent: HTMLElement): AboutModalHandle {
       </section>
 
       <section class="about-section">
+        <h2>Basemap</h2>
+        <p>
+          The cartographic basemap is served by <a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">OpenFreeMap</a>,
+          using <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> data
+          (© OpenStreetMap contributors, ODbL).
+        </p>
+      </section>
+
+      <section class="about-section">
         <h2>Limitations</h2>
         <p>
           This exhibit shows what has been documented and geolocated by the sources above. Many incidents

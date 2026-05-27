@@ -957,6 +957,17 @@ button { font-family: inherit; }
   margin: 0 0 12px;
 }
 
+#about-modal .about-section p a {
+  color: var(--ink-1, #111);
+  text-decoration: none;
+  border-bottom: 1px solid var(--hairline-strong, #d0d0d0);
+  transition: color 120ms ease, border-color 120ms ease;
+}
+#about-modal .about-section p a:hover {
+  color: var(--accent, #d3091e);
+  border-bottom-color: var(--accent, #d3091e);
+}
+
 #about-modal .about-section ul {
   font-family: var(--sans);
   font-size: 13.5px;

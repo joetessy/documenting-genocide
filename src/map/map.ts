@@ -1,4 +1,4 @@
-import maplibregl, { Map, AttributionControl, NavigationControl } from 'maplibre-gl';
+import maplibregl, { Map, NavigationControl } from 'maplibre-gl';
 import { gazaStyle } from './style';
 import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
 
@@ -44,16 +44,9 @@ export function mountMap(container: HTMLElement): Map {
     }),
     'top-right',
   );
-  map.addControl(
-    new AttributionControl({
-      compact: true,
-      customAttribution:
-        '<a href="https://airwars.org">Airwars</a> &middot; ' +
-        '<a href="https://ucdp.uu.se">UCDP</a> &middot; ' +
-        '<a href="https://data.humdata.org">OCHA UNOSAT</a>',
-    }),
-    'bottom-right',
-  );
+  // Attribution is intentionally suppressed on the map surface (it was
+  // visually obscuring content) and surfaced instead in the About modal,
+  // which lists every data source plus the basemap provider.
 
   map.on('load', () => {
     addGazaMask(map);
