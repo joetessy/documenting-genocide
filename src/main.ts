@@ -109,11 +109,12 @@ async function start(): Promise<void> {
   // a second or two. We only need the hash to reflect the *settled* date,
   // not every intermediate value during a drag.
   let hashUpdateTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastHashIncident: string | null = initial.incident ?? null;
   function scheduleHashUpdate(date: string): void {
     if (hashUpdateTimer) clearTimeout(hashUpdateTimer);
     hashUpdateTimer = setTimeout(() => {
       try {
-        const newHash = formatHash({ date });
+        const newHash = formatHash({ date, incident: lastHashIncident ?? undefined });
         if (newHash !== location.hash) {
           history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
         }
@@ -122,6 +123,22 @@ async function start(): Promise<void> {
         // state is correct regardless of whether the URL caught up.
       }
     }, 300);
+  }
+  function setHashIncident(id: string | null): void {
+    lastHashIncident = id;
+    // Incident clicks are rare — update the hash immediately rather than waiting
+    // for the scrubber debounce. Wrapped in try/catch for the same Safari reason.
+    try {
+      const newHash = formatHash({
+        date: timeCtrl.currentDate,
+        incident: lastHashIncident ?? undefined,
+      });
+      if (newHash !== location.hash) {
+        history.replaceState(null, '', `${location.pathname}${location.search}${newHash}`);
+      }
+    } catch {
+      // rate-limited; visible state is correct
+    }
   }
 
   timeCtrl.onChange((date) => {
@@ -133,6 +150,17 @@ async function start(): Promise<void> {
   markers.setVisibleDate(timeCtrl.currentDate);
   damage.setVisibleDate(timeCtrl.currentDate);
   header.updateForDate(timeCtrl.currentDate);
+
+  // Deep-link: if the URL hash names an incident, open its side panel.
+  // If no explicit date was in the hash, also jump the scrubber to that
+  // incident's date so the marker is actually visible.
+  if (initial.incident) {
+    const incident = byId.get(initial.incident);
+    if (incident) {
+      sidePanel.openIncident(incident);
+      if (!initial.date) timeCtrl.setDate(incident.date);
+    }
+  }
 
   const histogramHost = mountScrubber(app, timeCtrl);
   const incidentBuckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
@@ -217,6 +245,7 @@ async function start(): Promise<void> {
     const hits = map.queryRenderedFeatures(e.point, { layers: activeLayers });
     if (hits.length === 0) {
       sidePanel.close();
+      setHashIncident(null);
       return;
     }
     for (const layerId of CLICK_LAYER_PRIORITY) {
@@ -226,13 +255,22 @@ async function start(): Promise<void> {
       if (!id) return;
       if (layerId === 'incidents-circles') {
         const incident = byId.get(id);
-        if (incident) sidePanel.openIncident(incident);
+        if (incident) {
+          sidePanel.openIncident(incident);
+          setHashIncident(incident.id);
+        }
       } else if (layerId === 'damage-circles') {
         const damageFeat = damageById.get(id);
-        if (damageFeat) sidePanel.openDamage(damageFeat);
+        if (damageFeat) {
+          sidePanel.openDamage(damageFeat);
+          setHashIncident(null);
+        }
       } else if (layerId === 'facilities-health' || layerId === 'facilities-education') {
         const fac = facilityById.get(id);
-        if (fac) sidePanel.openFacility(fac);
+        if (fac) {
+          sidePanel.openFacility(fac);
+          setHashIncident(null);
+        }
       }
       return; // only handle the topmost hit
     }
