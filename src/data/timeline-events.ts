@@ -1,4 +1,4 @@
-// Curated list of major moments in the war on Gaza since Oct 7, 2023.
+// Curated list of major moments in the Genocide on Gaza since Oct 7, 2023.
 // These render as small markers on the scrubber's histogram. Hovering a
 // marker shows the date, title, and a one- to two-sentence description;
 // clicking jumps the scrubber to that date. Keep the list short (12-15
@@ -38,7 +38,7 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     date: '2023-10-07',
     title: 'Operation Al-Aqsa Flood',
     description:
-      'Hamas-led attack on southern Israel killed roughly 1,200 Israelis and took 251 hostages, triggering the war.',
+      'Palestinian resistance groups attacked southern Israel, killing roughly 1,200 Israelis and taking 251 hostages, triggering the war.',
   },
   {
     date: '2023-10-17',

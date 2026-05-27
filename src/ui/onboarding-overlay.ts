@@ -24,7 +24,7 @@ export function mountOnboarding(parent: HTMLElement): OnboardingHandle {
   card.setAttribute('aria-labelledby', 'onboarding-title');
 
   card.innerHTML = `
-    <h2 id="onboarding-title">A geographic record of the war on Gaza</h2>
+    <h2 id="onboarding-title">A geographic record of the Genocide on Gaza</h2>
     <p class="onboarding-lede">
       You're looking at <strong>8,000+ documented incidents</strong> and <strong>196,000+ damaged buildings</strong>
       across the Gaza Strip since October 7, 2023. Every marker is sourced from open public datasets — Airwars, UCDP,
