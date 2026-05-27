@@ -14,6 +14,18 @@ const SOURCES = [
     contribution: 'Primary incident layer for narrative depth (1,590 plotted records).',
   },
   {
+    name: 'Aid Worker Security Database',
+    url: 'https://www.aidworkersecurity.org/',
+    description:
+      "Per-incident records of attacks on aid workers worldwide, maintained by Humanitarian Outcomes. " +
+      "Each Gaza record includes date, coordinates, casualty counts (killed/wounded/kidnapped/detained), " +
+      "attack means, and a narrative summary.",
+    license:
+      'Free for non-commercial research with citation: "Humanitarian Outcomes (year), Aid Worker Security Database, aidworkersecurity.org".',
+    contribution:
+      'Hundreds of Gaza aid-worker incidents, surfacing a category that other sources tend to underreport.',
+  },
+  {
     name: 'UCDP Georeferenced Event Dataset v25.1',
     url: 'https://ucdp.uu.se/downloads/',
     description:
@@ -43,6 +55,31 @@ const SOURCES = [
       'Used with explicit written permission from CIR (2026). Attribution: "Centre for Information Resilience" on first mention, "CIR" afterwards.',
     contribution:
       "2,255 features verified by CIR's OSINT team add substantial breadth to the incident layer, particularly for events with social-media evidence trails.",
+  },
+  {
+    name: 'Geoconfirmed',
+    url: 'https://geoconfirmed.org/',
+    description:
+      "Volunteer-run OSINT verification platform. Each record represents a single geolocated, time-stamped " +
+      "incident from the Israel-Gaza-Lebanon theater, sourced from social-media posts and corroborated by community " +
+      "verifiers. Bellingcat sources their Gaza Damage Proxy Map's incident pins from this dataset.",
+    license:
+      'Free for research, journalism, and analytical use per Geoconfirmed\'s public API terms; attribution requested.',
+    contribution:
+      "Substantial OSINT-verified incident layer covering events not captured by Airwars or UCDP, particularly " +
+      "skirmishes, hostage-related locations, and infrastructure attacks.",
+  },
+  {
+    name: 'Wikidata + Wikipedia',
+    url: 'https://www.wikidata.org/wiki/Q122962941',
+    description:
+      "Structured records of major Gaza-war events from Wikidata (CC0), enriched with lead-paragraph descriptions " +
+      "from the corresponding Wikipedia articles. Covers historically significant moments like the Al-Ahli Hospital " +
+      "explosion, the Flour Massacre at Nabulsi roundabout, and the World Central Kitchen convoy strike.",
+    license:
+      'Wikidata content is CC0; Wikipedia text is CC BY-SA 4.0 with attribution to "Wikipedia contributors".',
+    contribution:
+      "Marquee incidents with Wikipedia-grade narratives — adds depth to the most internationally-reported moments.",
   },
   {
     name: 'HOT/OpenStreetMap (Palestine) — health & education facilities',
