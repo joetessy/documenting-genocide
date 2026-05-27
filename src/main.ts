@@ -1,4 +1,5 @@
 import './style.css';
+import type maplibregl from 'maplibre-gl';
 import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
@@ -283,7 +284,16 @@ async function start(): Promise<void> {
 
   map.on('click', (e) => {
     const activeLayers = CLICK_LAYER_PRIORITY.filter((l) => map.getLayer(l));
-    const hits = map.queryRenderedFeatures(e.point, { layers: activeLayers });
+    // Forgive small misses, especially in 3D / tilted views where dots get
+    // foreshortened. A 6px square around the click point is small enough to
+    // avoid accidentally hitting unintended features but generous enough
+    // to make tilted clicks feel reliable.
+    const PAD = 6;
+    const bbox: [maplibregl.PointLike, maplibregl.PointLike] = [
+      [e.point.x - PAD, e.point.y - PAD],
+      [e.point.x + PAD, e.point.y + PAD],
+    ];
+    const hits = map.queryRenderedFeatures(bbox, { layers: activeLayers });
     if (hits.length === 0) {
       sidePanel.close();
       setHashIncident(null);
