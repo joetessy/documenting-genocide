@@ -1,9 +1,6 @@
 import type { Feature } from 'geojson';
 import type { Incident, IncidentCategory, SourceAttribution } from '../shared/types';
-
-function isInGazaBbox(lat: number, lon: number): boolean {
-  return lat >= 31.20 && lat <= 31.60 && lon >= 34.20 && lon <= 34.60;
-}
+import { isInGazaPolygon } from '../shared/gaza-polygon';
 
 const KEYWORDS: Array<{ pattern: RegExp; category: IncidentCategory }> = [
   { pattern: /\b(air ?strike|airstrikes?|drone strike|aerial bombardment|bombing)\b/i, category: 'airstrike' },
@@ -41,7 +38,7 @@ export function normalizeCirFeature(feat: Feature): Incident | null {
   if (!Array.isArray(coords) || coords.length < 2) return null;
   const [lon, lat] = coords as [number, number];
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (!isInGazaBbox(lat, lon)) return null;
+  if (!isInGazaPolygon(lat, lon)) return null;
 
   const props = (feat.properties ?? {}) as Record<string, unknown>;
 

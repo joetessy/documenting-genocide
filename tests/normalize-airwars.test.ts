@@ -4,7 +4,6 @@ import {
   parseAirwarsDate,
   pickPrimaryCoord,
   decodeHtmlEntities,
-  isInGazaBbox,
 } from '../scripts/normalize-airwars';
 
 const TAXONOMIES = {
@@ -103,21 +102,6 @@ describe('pickPrimaryCoord', () => {
   it('returns null for out-of-range longitude', () => {
     expect(pickPrimaryCoord([{ latitude: 31, longitude: 181 }])).toBeNull();
     expect(pickPrimaryCoord([{ latitude: 31, longitude: -181 }])).toBeNull();
-  });
-});
-
-describe('isInGazaBbox', () => {
-  it('accepts points inside Gaza', () => {
-    expect(isInGazaBbox(31.5, 34.4)).toBe(true);     // Gaza City area
-    expect(isInGazaBbox(31.21, 34.21)).toBe(true);   // SW corner
-    expect(isInGazaBbox(31.59, 34.59)).toBe(true);   // NE corner
-  });
-
-  it('rejects points outside Gaza', () => {
-    expect(isInGazaBbox(34.49, 31.50)).toBe(false);  // the swapped-coord case
-    expect(isInGazaBbox(31.7, 34.4)).toBe(false);    // north of Gaza
-    expect(isInGazaBbox(31.5, 34.7)).toBe(false);    // east of Gaza
-    expect(isInGazaBbox(0, 0)).toBe(false);
   });
 });
 

@@ -4,6 +4,7 @@ import type {
   FacilityCategory,
   SourceAttribution,
 } from '../shared/types';
+import { isInGazaPolygon } from '../shared/gaza-polygon';
 
 const HEALTH_AMENITIES = new Set([
   'hospital',
@@ -32,10 +33,6 @@ const EDUCATION_AMENITIES = new Set([
   'college',
   'university',
 ]);
-
-function isInGazaBbox(lat: number, lon: number): boolean {
-  return lat >= 31.20 && lat <= 31.60 && lon >= 34.20 && lon <= 34.60;
-}
 
 function osmIdToUrl(osmId: string): string {
   // OSM ids are like 'node/505095722' or 'way/12345'. The OSM browse URL pattern is
@@ -66,7 +63,7 @@ export function normalizeOsmFacility(feat: Feature): FacilityRecord | null {
   if (!Array.isArray(coords) || coords.length < 2) return null;
   const [lon, lat] = coords as [number, number];
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (!isInGazaBbox(lat, lon)) return null;
+  if (!isInGazaPolygon(lat, lon)) return null;
 
   const props = (feat.properties ?? {}) as Record<string, unknown>;
 
