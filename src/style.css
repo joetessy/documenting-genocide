@@ -503,23 +503,32 @@ button { font-family: inherit; }
   transition: background 100ms;
 }
 #side-panel .sp-source:hover { background: var(--hairline); }
-#side-panel .sp-source a {
-  color: var(--ink-1);
-  text-decoration: none;
-  flex: 1;
-  font-weight: 500;
-}
-#side-panel .sp-source a:hover { color: var(--accent); }
 #side-panel .sp-source-org {
   font-family: var(--sans);
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 2px 5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-1, #15140f);
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--hairline, rgba(20, 18, 12, 0.08));
   border-radius: 3px;
-  background: var(--ink-1);
-  color: white;
+  margin-right: 6px;
+}
+
+#side-panel .sp-source a {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-2, #3d3a32);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--hairline-strong, rgba(20, 18, 12, 0.16));
+  transition: color 100ms ease, border-color 100ms ease;
+}
+
+#side-panel .sp-source a:hover {
+  color: var(--accent, #d3091e);
+  border-bottom-color: var(--accent, #d3091e);
 }
 #side-panel .sp-rating {
   font-size: 10px;
