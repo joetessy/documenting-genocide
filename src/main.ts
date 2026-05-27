@@ -141,9 +141,25 @@ async function start(): Promise<void> {
     }
   }
 
+  // Damage layer has 196K features — each setFilter call costs 50-300ms.
+  // During a fast drag the layer can't keep up. Debounce so it updates
+  // 120ms after the user pauses, leaving markers + header + URL hash
+  // fully responsive in the meantime. Tour mode (5500ms per event) and
+  // auto-play (333ms per tick) both clear this comfortably.
+  let damageUpdateTimer: ReturnType<typeof setTimeout> | undefined;
+  let pendingDamageDate: string | null = null;
+  function scheduleDamageUpdate(date: string): void {
+    pendingDamageDate = date;
+    if (damageUpdateTimer) clearTimeout(damageUpdateTimer);
+    damageUpdateTimer = setTimeout(() => {
+      if (pendingDamageDate) damage.setVisibleDate(pendingDamageDate);
+      damageUpdateTimer = undefined;
+    }, 120);
+  }
+
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
-    damage.setVisibleDate(date);
+    scheduleDamageUpdate(date);
     header.updateForDate(date);
     scheduleHashUpdate(date);
   });
