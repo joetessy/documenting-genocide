@@ -4,10 +4,12 @@ import { fetchAirwars } from './fetch-airwars';
 import { fetchUcdp } from './fetch-ucdp';
 import { fetchOcha } from './fetch-ocha';
 import { fetchOsmFacilities } from './fetch-osm-facilities';
+import { fetchCir } from './fetch-cir';
 import { normalizeAirwarsRecord, type AirwarsTaxonomies, type ArticleData } from './normalize-airwars';
 import { normalizeUcdpRecord } from './normalize-ucdp';
 import { normalizeOchaFeature } from './normalize-ocha';
 import { normalizeOsmFacility } from './normalize-osm-facilities';
+import { normalizeCirFeature } from './normalize-cir';
 import { dedupeIncidents } from './dedupe';
 import type { Incident, BuildMeta, DamageRecord, DamageStatus, FacilityRecord } from '../shared/types';
 
@@ -16,6 +18,7 @@ const ARTICLES_DIR = 'data/raw/airwars/articles';
 const UCDP_RAW = 'data/raw/ucdp';
 const OCHA_RAW = 'data/raw/ocha';
 const OSM_RAW = 'data/raw/osm';
+const CIR_RAW = 'data/raw/cir';
 const OUT_DIR = 'public/data';
 
 async function loadAirwarsPages(): Promise<unknown[]> {
@@ -72,10 +75,18 @@ async function loadOchaFeatures(): Promise<GeoJSON.Feature[]> {
   } catch { return []; }
 }
 
+async function loadCirFeatures(): Promise<GeoJSON.Feature[]> {
+  try {
+    const fc = JSON.parse(await readFile(join(CIR_RAW, 'incidents.geojson'), 'utf8')) as GeoJSON.FeatureCollection;
+    return fc.features ?? [];
+  } catch { return []; }
+}
+
 async function main(): Promise<void> {
   await fetchAirwars();
   await fetchUcdp();
   await fetchOcha();
+  await fetchCir();
   await fetchOsmFacilities();
 
   const airwarsRaws = await loadAirwarsPages();
@@ -99,10 +110,21 @@ async function main(): Promise<void> {
     if (inc) ucdpIncidents.push(inc);
     else ucdpUnplotted++;
   }
-  console.log(`Normalized ${airwarsIncidents.length} Airwars + ${ucdpIncidents.length} UCDP incidents`);
-  console.log(`  Unplotted: ${airwarsUnplotted} Airwars, ${ucdpUnplotted} UCDP`);
+  const cirRaws = await loadCirFeatures();
+  console.log(`Loaded ${cirRaws.length} CIR raw features`);
+  const cirIncidents: Incident[] = [];
+  let cirUnplotted = 0;
+  for (const f of cirRaws) {
+    const inc = normalizeCirFeature(f);
+    if (inc) cirIncidents.push(inc);
+    else cirUnplotted++;
+  }
+  console.log(`Normalized ${cirIncidents.length} CIR incidents (${cirUnplotted} dropped)`);
 
-  const { incidents: dedupedIncidents, merges } = dedupeIncidents([...airwarsIncidents, ...ucdpIncidents]);
+  console.log(`Normalized ${airwarsIncidents.length} Airwars + ${ucdpIncidents.length} UCDP + ${cirIncidents.length} CIR incidents`);
+  console.log(`  Unplotted: ${airwarsUnplotted} Airwars, ${ucdpUnplotted} UCDP, ${cirUnplotted} CIR`);
+
+  const { incidents: dedupedIncidents, merges } = dedupeIncidents([...airwarsIncidents, ...ucdpIncidents, ...cirIncidents]);
   console.log(`Dedup: ${airwarsIncidents.length + ucdpIncidents.length} → ${dedupedIncidents.length} (${merges} merges)`);
 
   // Clip to the start of the war. Pre-Oct-7-2023 records are pre-war and
@@ -200,10 +222,11 @@ async function main(): Promise<void> {
     source_counts: {
       airwars: airwarsIncidents.length,
       ucdp: ucdpIncidents.length,
+      cir: cirIncidents.length,
       osm: facilities.length,
     },
     dedup_merges: merges,
-    unplotted_count: airwarsUnplotted + ucdpUnplotted,
+    unplotted_count: airwarsUnplotted + ucdpUnplotted + cirUnplotted,
     damage_count: damageInConflict.length,
     facility_count: facilities.length,
   };
