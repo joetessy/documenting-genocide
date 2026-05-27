@@ -8,6 +8,7 @@ import { fetchCir } from './fetch-cir';
 import { fetchGeoconfirmed } from './fetch-geoconfirmed';
 import { fetchAwsd } from './fetch-awsd';
 import { fetchWikidata } from './fetch-wikidata';
+import { fetchCasualtyToll, type DailyCasualty } from './fetch-casualty-toll';
 import { normalizeAirwarsRecord, type AirwarsTaxonomies, type ArticleData } from './normalize-airwars';
 import { normalizeUcdpRecord } from './normalize-ucdp';
 import { normalizeOchaFeature } from './normalize-ocha';
@@ -28,6 +29,7 @@ const CIR_RAW = 'data/raw/cir';
 const GEOCONFIRMED_RAW = 'data/raw/geoconfirmed';
 const AWSD_RAW = 'data/raw/awsd';
 const WIKIDATA_RAW = 'data/raw/wikidata';
+const CASUALTY_TOLL_RAW = 'data/raw/casualty-toll';
 const OUT_DIR = 'public/data';
 
 async function loadAirwarsPages(): Promise<unknown[]> {
@@ -106,6 +108,11 @@ async function loadWikidataEvents(): Promise<unknown[]> {
   catch { return []; }
 }
 
+async function loadCasualtyToll(): Promise<DailyCasualty[]> {
+  try { return JSON.parse(await readFile(join(CASUALTY_TOLL_RAW, 'daily.json'), 'utf8')) as DailyCasualty[]; }
+  catch { return []; }
+}
+
 async function main(): Promise<void> {
   await fetchAirwars();
   await fetchUcdp();
@@ -115,6 +122,7 @@ async function main(): Promise<void> {
   await fetchAwsd();
   await fetchWikidata();
   await fetchOsmFacilities();
+  await fetchCasualtyToll();
 
   const airwarsRaws = await loadAirwarsPages();
   const taxonomies = await loadTaxonomies();
@@ -284,6 +292,19 @@ async function main(): Promise<void> {
   await writeFile(join(OUT_DIR, 'facilities.json'), JSON.stringify(facilities));
   console.log(`Wrote ${facilities.length} facilities to ${OUT_DIR}/facilities.json`);
 
+  // Daily Gaza Ministry of Health cumulative casualty toll (via Tech for
+  // Palestine aggregator). Already in {date, killed, injured?} shape — no
+  // normalize step needed. Drives the "Killed" header counter.
+  const casualtyToll = await loadCasualtyToll();
+  const latestToll = casualtyToll[casualtyToll.length - 1];
+  const latestKilled = latestToll?.killed ?? 0;
+  console.log(`Loaded ${casualtyToll.length} daily casualty entries`);
+  if (latestToll) {
+    console.log(`  Latest: ${latestToll.date} — killed_cum=${latestKilled}`);
+  }
+  await writeFile(join(OUT_DIR, 'casualty-toll.json'), JSON.stringify(casualtyToll));
+  console.log(`Wrote ${casualtyToll.length} casualty toll entries to ${OUT_DIR}/casualty-toll.json`);
+
   const meta: BuildMeta = {
     build_date: new Date().toISOString(),
     source_counts: {
@@ -299,6 +320,7 @@ async function main(): Promise<void> {
     unplotted_count: airwarsUnplotted + ucdpUnplotted + cirUnplotted + geoconfirmedUnplotted + awsdUnplotted + wikidataUnplotted,
     damage_count: damageInConflict.length,
     facility_count: facilities.length,
+    casualty_toll_count: latestKilled,
   };
   await writeFile(join(OUT_DIR, 'meta.json'), JSON.stringify(meta, null, 2));
 
