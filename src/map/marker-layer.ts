@@ -74,7 +74,14 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
       type: 'circle',
       source: SOURCE_ID,
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3, 14, 6, 17, 9],
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,  ['step', ['number', ['get', 'killed'], 0], 3,    10, 4.5,  50, 6.5,  100, 9],
+          14, ['step', ['number', ['get', 'killed'], 0], 6,    10, 9,    50, 13,   100, 18],
+          17, ['step', ['number', ['get', 'killed'], 0], 9,    10, 13,   50, 18,   100, 24],
+        ],
         'circle-color': '#e63946',
         'circle-stroke-color': '#000000',
         'circle-stroke-width': 1.5,
@@ -92,7 +99,14 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
       type: 'circle',
       source: SOURCE_ID,
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 6, 14, 10, 17, 14],
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,  ['step', ['number', ['get', 'killed'], 0], 5,   10, 7,    50, 10,   100, 14],
+          14, ['step', ['number', ['get', 'killed'], 0], 10,  10, 13,   50, 18,   100, 26],
+          17, ['step', ['number', ['get', 'killed'], 0], 14,  10, 18,   50, 26,   100, 34],
+        ],
         'circle-color': '#e63946',
         'circle-stroke-color': '#000000',
         'circle-stroke-width': 2,
