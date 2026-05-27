@@ -4,10 +4,10 @@ const SOURCE_ID = 'damage';
 const LAYER_ID = 'damage-circles';
 
 const STATUS_COLORS: Record<string, string> = {
-  destroyed: '#7a0e0e',
-  severe: '#a8430b',
-  moderate: '#6b5424',
-  possibly_damaged: '#5a5a5a',
+  destroyed: '#7a0e0e',         // deep blood red — most damaged, unchanged
+  severe: '#c2470d',             // brighter rust — was muted #a8430b, now more visible
+  moderate: '#856416',           // brighter olive — was #6b5424, +saturation
+  possibly_damaged: '#4a4a4a',   // medium-dark grey — was #5a5a5a, deeper for legibility
 };
 
 export interface DamageLayerHandle {
