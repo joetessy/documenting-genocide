@@ -13,6 +13,7 @@ import { mountLoading } from './ui/loading';
 import { mountLayerToggle } from './ui/layer-toggle';
 import { mountHeader } from './ui/header';
 import { mountAboutModal } from './ui/about-modal';
+import { mountOnboarding } from './ui/onboarding-overlay';
 import { parseHash, formatHash } from './url-state';
 import { TIMELINE_EVENTS } from './data/timeline-events';
 
@@ -29,6 +30,7 @@ async function start(): Promise<void> {
 
   const map = mountMap(mapEl);
   mountRotationHint(app);
+  mountOnboarding(app);
 
   const aboutModal = mountAboutModal(app);
   const aboutBtn = document.createElement('button');
