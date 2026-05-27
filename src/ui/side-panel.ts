@@ -15,6 +15,9 @@ const ORG_LABEL: Record<SourceOrg, string> = {
   ucdp: 'UCDP',
   osm: 'OpenStreetMap (HOT)',
   cir: 'Centre for Information Resilience',
+  geoconfirmed: 'Geoconfirmed',
+  awsd: 'Aid Worker Security Database',
+  wikidata: 'Wikidata',
 };
 
 const DAMAGE_CLASS_LABEL: Record<number, DamageStatus> = {
