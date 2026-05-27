@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dedupeIncidents, groupKey } from '../scripts/dedupe';
+import { dedupeIncidents, groupKey, richnessScore } from '../scripts/dedupe';
 import type { Incident } from '../shared/types';
 
 function makeIncident(overrides: Partial<Incident> & { id: string }): Incident {
@@ -100,5 +100,76 @@ describe('dedupeIncidents', () => {
     const b = makeIncident({ id: 'acled:1' });
     const { incidents } = dedupeIncidents([a, b]);
     expect(incidents[0].id).toBe('airwars:1');
+  });
+});
+
+describe('richnessScore', () => {
+  function baseIncident(overrides: Partial<Incident> = {}): Incident {
+    return {
+      id: 'test:1',
+      date: '2024-01-01',
+      location: { lat: 31.4, lon: 34.4 },
+      category: 'other',
+      casualties: { killed: null, injured: null, killed_children: null, killed_women: null },
+      description: [],
+      sources: [],
+      ...overrides,
+    };
+  }
+
+  it('returns 0 for a bare record', () => {
+    expect(richnessScore(baseIncident())).toBe(0);
+  });
+
+  it('awards points for description length', () => {
+    const sparse = baseIncident({ description: ['short'] });
+    const rich = baseIncident({ description: ['x'.repeat(2000)] });
+    expect(richnessScore(rich)).toBeGreaterThan(richnessScore(sparse));
+    // Cap at 20 points
+    const huge = baseIncident({ description: ['x'.repeat(10000)] });
+    expect(richnessScore(huge)).toBe(20);
+  });
+
+  it('awards 2 points per source', () => {
+    const oneSource = baseIncident({ sources: [{ org: 'cir', id: 'a', url: 'https://a' }] });
+    const threeSources = baseIncident({
+      sources: [
+        { org: 'cir', id: 'a', url: 'https://a' },
+        { org: 'ucdp', id: 'b', url: 'https://b' },
+        { org: 'airwars', id: 'c', url: 'https://c' },
+      ],
+    });
+    expect(richnessScore(threeSources) - richnessScore(oneSource)).toBe(4);
+  });
+
+  it('awards 3 points per filled casualty field', () => {
+    const empty = baseIncident();
+    const full = baseIncident({
+      casualties: { killed: 5, injured: 10, killed_children: 2, killed_women: 1 },
+    });
+    expect(richnessScore(full) - richnessScore(empty)).toBe(12);
+  });
+
+  it('awards points for location metadata and specific category', () => {
+    const bare = baseIncident();
+    const enriched = baseIncident({
+      location: { lat: 31.4, lon: 34.4, name: 'Khan Younis', governorate: 'khan_younis' },
+      category: 'airstrike',
+    });
+    expect(richnessScore(enriched) - richnessScore(bare)).toBe(2 + 1 + 2);
+  });
+
+  it('awards 5 points once for any rated source', () => {
+    const unrated = baseIncident({
+      sources: [{ org: 'cir', id: 'a', url: 'https://a' }],
+    });
+    const rated = baseIncident({
+      sources: [
+        { org: 'airwars', id: 'a', url: 'https://a', rating: 'fair' },
+        { org: 'airwars', id: 'b', url: 'https://b', rating: 'confirmed' },
+      ],
+    });
+    // 2 sources × 2 + 5 rating bonus (once) - 1 source × 2 = 7
+    expect(richnessScore(rated) - richnessScore(unrated)).toBe(7);
   });
 });

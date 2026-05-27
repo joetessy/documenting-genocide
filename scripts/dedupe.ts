@@ -47,16 +47,60 @@ function unionSources(a: SourceAttribution[], b: SourceAttribution[]): SourceAtt
   return out;
 }
 
-function hasAirwarsSource(inc: Incident): boolean {
-  return inc.sources.some((s) => s.org === 'airwars');
+// Score a record on how much information it contributes. Used by mergeTwo to
+// pick which of two duplicate records becomes "primary" — the one whose id,
+// coordinates, location name, governorate, and category survive the merge.
+// Description length, casualty granularity, and source-link count all
+// contribute. Tie → first arg wins (deterministic across builds).
+export function richnessScore(inc: Incident): number {
+  let score = 0;
+
+  // Description: 1 point per 100 chars, capped at 20. A 2,000-char Airwars
+  // narrative gives the full 20; a 100-char UCDP headline gives 1.
+  const descChars = inc.description.reduce((acc, p) => acc + p.length, 0);
+  score += Math.min(20, Math.floor(descChars / 100));
+
+  // Source URLs: 2 points each. More sources = more verifiable.
+  score += inc.sources.length * 2;
+
+  // Casualty granularity: 3 points per non-null field. A record that
+  // distinguishes killed_children / killed_women from killed scores higher
+  // than one that just says killed=N.
+  if (inc.casualties.killed !== null) score += 3;
+  if (inc.casualties.injured !== null) score += 3;
+  if (inc.casualties.killed_children !== null) score += 3;
+  if (inc.casualties.killed_women !== null) score += 3;
+
+  // Place metadata.
+  if (inc.location.name) score += 2;
+  if (inc.location.governorate) score += 1;
+
+  // Specific category beats the 'other' fallback.
+  if (inc.category !== 'other') score += 2;
+
+  // Credibility rating (Airwars-only field today): 5 once if any source
+  // carries 'fair' or 'confirmed'.
+  for (const s of inc.sources) {
+    if (s.rating === 'fair' || s.rating === 'confirmed') {
+      score += 5;
+      break;
+    }
+  }
+
+  return score;
 }
 
 function mergeTwo(a: Incident, b: Incident): Incident {
-  const aIsAirwars = hasAirwarsSource(a);
-  const bIsAirwars = hasAirwarsSource(b);
-  const primary = aIsAirwars && !bIsAirwars ? a : (bIsAirwars && !aIsAirwars ? b : a);
+  // Higher-scoring record becomes primary. Ties (including identical
+  // scores) keep `a` for determinism across re-runs.
+  const aScore = richnessScore(a);
+  const bScore = richnessScore(b);
+  const primary = aScore >= bScore ? a : b;
   const secondary = primary === a ? b : a;
 
+  // Description is independent: longest wins regardless of which is primary,
+  // since a verbose UCDP record can carry useful narrative even if Airwars
+  // is otherwise richer in metadata.
   const longerDescription =
     descriptionLength(a.description) >= descriptionLength(b.description) ? a.description : b.description;
 
