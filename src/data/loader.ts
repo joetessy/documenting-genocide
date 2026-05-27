@@ -5,6 +5,12 @@ export interface LoadedData {
   meta: BuildMeta;
 }
 
+export interface DailyCasualty {
+  date: string;       // ISO YYYY-MM-DD
+  killed: number;     // cumulative through this date
+  injured?: number;   // cumulative through this date (optional)
+}
+
 export interface DamagePass {
   date: string;
   class: number;     // 1=destroyed 2=severe 3=moderate 4=possibly_damaged
@@ -50,4 +56,10 @@ export async function loadFacilities(): Promise<FacilityRecord[]> {
   const res = await fetch('/data/facilities.json');
   if (!res.ok) throw new Error(`Failed to load facilities.json: ${res.status}`);
   return (await res.json()) as FacilityRecord[];
+}
+
+export async function loadCasualtyToll(): Promise<DailyCasualty[]> {
+  const res = await fetch('/data/casualty-toll.json');
+  if (!res.ok) throw new Error(`Failed to load casualty-toll.json: ${res.status}`);
+  return (await res.json()) as DailyCasualty[];
 }
