@@ -93,7 +93,7 @@ async function start(): Promise<void> {
   // happens to contain. The build pipeline already filters pre-war records,
   // but this also covers the case where the earliest incident is a few days
   // after Oct 7 — we still want the slider to begin at Oct 7 itself.
-  const firstDate = '2023-10-07';
+  const firstDate = '2023-10-06';  // one day before the war so the initial state is fully empty
   const lastDate = incidents[incidents.length - 1]?.date ?? '2024-12-31';
   const initial = parseHash(location.hash);
 

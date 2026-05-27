@@ -143,10 +143,11 @@ export function mountHeader(
       elIncidents.textContent = fmt.format(inc);
       elDamage.textContent = fmt.format(dam);
 
-      // Oct 7 2023 is Day 1 (inclusive), so add 1 to the day delta. Clamp
-      // negatives in case the scrubber somehow lands before the war start.
-      const daysSinceStart = Math.max(1, daysBetween(CONFLICT_START, date) + 1);
-      elDayN.textContent = `Day ${daysSinceStart}`;
+      // Oct 7 2023 is Day 1 (inclusive), so add 1 to the day delta. When the
+      // scrubber lands before Oct 7 (the initial empty state at Oct 6),
+      // render "Day –" to communicate the war has not started yet.
+      const daysSinceStart = daysBetween(CONFLICT_START, date) + 1;
+      elDayN.textContent = daysSinceStart >= 1 ? `Day ${daysSinceStart}` : 'Day –';
     },
   };
 }
