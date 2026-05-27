@@ -24,7 +24,11 @@ export async function mountDamageLayer(
   let layerReady = false;
 
   function buildFilter(date: string | null): maplibregl.FilterSpecification {
-    return ['<=', ['get', 'assessment_date'], date ?? '1900-01-01'] as unknown as maplibregl.FilterSpecification;
+    return [
+      'all',
+      ['!', ['has', 'point_count']],
+      ['<=', ['get', 'assessment_date'], date ?? '1900-01-01'],
+    ] as unknown as maplibregl.FilterSpecification;
   }
 
   let rafScheduled = false;
@@ -37,13 +41,23 @@ export async function mountDamageLayer(
     requestAnimationFrame(() => {
       rafScheduled = false;
       if (!map.getLayer(LAYER_ID)) return;
-      map.setLayoutProperty(LAYER_ID, 'visibility', pendingVisible ? 'visible' : 'none');
+      const vis = pendingVisible ? 'visible' : 'none';
+      map.setLayoutProperty(LAYER_ID, 'visibility', vis);
+      if (map.getLayer('damage-clusters')) map.setLayoutProperty('damage-clusters', 'visibility', vis);
+      if (map.getLayer('damage-cluster-count')) map.setLayoutProperty('damage-cluster-count', 'visibility', vis);
       map.setFilter(LAYER_ID, buildFilter(pendingDate));
     });
   }
 
   const addLayer = (): void => {
-    map.addSource(SOURCE_ID, { type: 'geojson', data });
+    map.addSource(SOURCE_ID, {
+      type: 'geojson',
+      data,
+      cluster: true,
+      clusterRadius: 28,
+      clusterMaxZoom: 11,   // above this zoom, render individual features
+      clusterMinPoints: 8,  // require 8+ nearby points to cluster
+    });
     map.addLayer(
       {
         id: LAYER_ID,
@@ -75,6 +89,59 @@ export async function mountDamageLayer(
       },
       'incidents-circles',
     );
+
+    // Cluster bubble — larger circle sized by point_count, at zooms < 12.
+    // Cluster counts include ALL features regardless of scrub date — MapLibre's
+    // clustering doesn't respect feature-level filters. Acceptable for low-zoom
+    // orientation; a future pass could use clusterProperties to aggregate by date.
+    map.addLayer(
+      {
+        id: 'damage-clusters',
+        type: 'circle',
+        source: SOURCE_ID,
+        filter: ['has', 'point_count'] as never,
+        layout: { visibility: pendingVisible ? 'visible' : 'none' },
+        paint: {
+          'circle-color': 'rgba(122, 14, 14, 0.55)',  // muted blood red, semi-transparent
+          'circle-stroke-color': 'rgba(122, 14, 14, 0.9)',
+          'circle-stroke-width': 1,
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            12, 50,
+            16, 200,
+            22, 1000,
+            30, 5000,
+            42,
+          ],
+        },
+      },
+      'incidents-circles',
+    );
+
+    // Cluster count label.
+    map.addLayer(
+      {
+        id: 'damage-cluster-count',
+        type: 'symbol',
+        source: SOURCE_ID,
+        filter: ['has', 'point_count'] as never,
+        layout: {
+          visibility: pendingVisible ? 'visible' : 'none',
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 11,
+          'text-allow-overlap': true,
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': 'rgba(122, 14, 14, 0.6)',
+          'text-halo-width': 1,
+        },
+      },
+      'incidents-circles',
+    );
+
     layerReady = true;
   };
 
