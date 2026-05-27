@@ -91,4 +91,5 @@ export interface BuildMeta {
   unplotted_count: number;     // records discarded for missing coordinates
   damage_count?: number;
   facility_count?: number;
+  casualty_toll_count?: number; // latest cumulative killed figure (sanity check)
 }
