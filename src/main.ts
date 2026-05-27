@@ -5,6 +5,7 @@ import { mountDamageLayer } from './map/damage-layer';
 import { mountFacilityLayer } from './map/facility-layer';
 import { loadIncidents, loadDamage, loadFacilities, loadCasualtyToll } from './data/loader';
 import { TimeController } from './time/time-controller';
+import { TourController } from './time/tour-controller';
 import { mountScrubber } from './time/scrubber';
 import { bucketByDay, bucketDamageByDay, renderHistogram } from './time/histogram';
 import { mountTooltip } from './ui/tooltip';
@@ -142,6 +143,33 @@ async function start(): Promise<void> {
   );
   requestAnimationFrame(drawHistogram);
   window.addEventListener('resize', drawHistogram);
+
+  // Tour controller — auto-advances through the 14 timeline events with a
+  // brief pause + side-panel context at each. Click to start/stop.
+  const tour = new TourController({
+    events: TIMELINE_EVENTS,
+    timeCtrl,
+    panel: {
+      showEventCard(ev) { sidePanel.openTimelineEvent(ev, `Tour stop · ${ev.date}`); },
+      close() { sidePanel.close(); },
+    },
+    perEventMs: 4500,
+    onStateChange(isPlaying) {
+      tourBtn.textContent = isPlaying ? '◼ Stop tour' : '▸ Tour';
+      tourBtn.classList.toggle('is-playing', isPlaying);
+    },
+  });
+
+  const tourBtn = document.createElement('button');
+  tourBtn.id = 'tour-btn';
+  tourBtn.type = 'button';
+  tourBtn.textContent = '▸ Tour';
+  tourBtn.setAttribute('aria-label', 'Start guided tour of major events');
+  tourBtn.addEventListener('click', () => tour.toggle());
+  app.appendChild(tourBtn);
+
+  // Clicking the map during a tour cancels it (intent: user wants to explore on their own).
+  map.on('click', () => { if (tour.isPlaying) tour.stop(); });
 
   map.on('mousemove', 'incidents-circles', (e) => {
     if (!e.features || e.features.length === 0) return;
