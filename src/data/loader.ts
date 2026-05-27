@@ -46,12 +46,21 @@ export async function loadIncidents(): Promise<LoadedData> {
 }
 
 export async function loadDamage(): Promise<DamageData> {
-  // Pre-gzipped to fit Cloudflare Pages' 25MiB per-asset limit (raw ~43MB, gzipped ~2MB).
-  // Served with Content-Encoding: gzip (Vite handles this automatically for .gz files;
-  // Cloudflare Pages uses public/_headers). The browser decompresses transparently.
+  // Pre-gzipped to fit Cloudflare's 25MiB per-asset limit (raw ~43MB, gzipped ~2MB).
+  // We decompress in the browser rather than relying on Content-Encoding because
+  // Cloudflare Workers Static Assets ignores _headers' Content-Encoding directive
+  // (the edge manages compression itself). Detecting the gzip magic bytes lets
+  // this work in dev (Vite serves the raw .gz with Content-Encoding: gzip, which
+  // the browser pre-decodes for us) and in prod (raw gzip bytes reach the client).
   const res = await fetch('/data/damage.geojson.gz');
   if (!res.ok) throw new Error(`Failed to load damage.geojson.gz: ${res.status}`);
-  return (await res.json()) as DamageData;
+  const buf = await res.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const isGzipped = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  const text = isGzipped
+    ? await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
+    : new TextDecoder().decode(buf);
+  return JSON.parse(text) as DamageData;
 }
 
 export async function loadFacilities(): Promise<FacilityRecord[]> {
