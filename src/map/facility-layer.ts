@@ -89,8 +89,17 @@ export async function mountFacilityLayer(
     layerReady = true;
   };
 
-  if (map.isStyleLoaded()) addLayers();
-  else map.once('load', addLayers);
+  // See damage-layer.ts for the rationale on this pattern — 'load' is a
+  // one-shot and may have already fired before this function runs.
+  let added = false;
+  const tryAdd = (): void => {
+    if (added || !map.isStyleLoaded()) return;
+    added = true;
+    map.off('styledata', tryAdd);
+    addLayers();
+  };
+  if (map.isStyleLoaded()) tryAdd();
+  else { map.on('styledata', tryAdd); map.once('load', tryAdd); }
 
   return {
     setVisible(category, v) {
