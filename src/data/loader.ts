@@ -21,7 +21,6 @@ export interface DamageFeature {
   id: string;
   geometry: { type: 'Point'; coordinates: [number, number] };
   properties: {
-    id: string;
     status: string;
     assessment_date: string;
     governorate?: string;
@@ -47,8 +46,11 @@ export async function loadIncidents(): Promise<LoadedData> {
 }
 
 export async function loadDamage(): Promise<DamageData> {
-  const res = await fetch('/data/damage.geojson');
-  if (!res.ok) throw new Error(`Failed to load damage.geojson: ${res.status}`);
+  // Pre-gzipped to fit Cloudflare Pages' 25MiB per-asset limit (raw ~43MB, gzipped ~2MB).
+  // Served with Content-Encoding: gzip (Vite handles this automatically for .gz files;
+  // Cloudflare Pages uses public/_headers). The browser decompresses transparently.
+  const res = await fetch('/data/damage.geojson.gz');
+  if (!res.ok) throw new Error(`Failed to load damage.geojson.gz: ${res.status}`);
   return (await res.json()) as DamageData;
 }
 

@@ -334,7 +334,7 @@ async function start(): Promise<void> {
   });
 
   // Build a quick lookup of damage features by id, so clicks can hydrate the panel.
-  const damageById = new Map(damageData.features.map((f) => [f.properties.id, f]));
+  const damageById = new Map(damageData.features.map((f) => [f.id, f]));
 
   const facilityById = new Map(facilities.map((f) => [f.id, f]));
 
