@@ -17,7 +17,7 @@ export type IncidentCategory =
   | 'detention'
   | 'other';
 
-export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp' | 'osm';
+export type SourceOrg = 'airwars' | 'acled' | 'ocha' | 'ucdp' | 'osm' | 'cir';
 
 export type CredibilityRating = 'fair' | 'weak' | 'contested' | 'confirmed';
 
