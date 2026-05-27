@@ -83,6 +83,10 @@ async function start(): Promise<void> {
     if (map.getLayer('incidents-circles')) {
       map.setLayoutProperty('incidents-circles', 'visibility', s.incidents ? 'visible' : 'none');
     }
+    const enabledCats = (Object.entries(s.incidentCategories) as [string, boolean][])
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    markers.setCategoryFilter(enabledCats.length === 6 ? null : enabledCats);
   });
 
   // Anchor the timeline to the start of the war regardless of what the data

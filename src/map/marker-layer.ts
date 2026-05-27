@@ -27,6 +27,7 @@ function toGeoJSON(incidents: Incident[]): GeoJSON.FeatureCollection {
 export interface MarkerLayerHandle {
   setVisibleDate(date: string): void;        // ISO YYYY-MM-DD; shows incidents on or before this date
   setHoveredId(id: string | null): void;
+  setCategoryFilter(cats: string[] | null): void; // null = all categories; otherwise only the listed categories render
 }
 
 export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle {
@@ -36,7 +37,16 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
   // layer ends up with the placeholder '1900-01-01' filter — no markers visible.
   let pendingDate: string | null = null;
   let pendingHoveredId: string | null = null;
+  let pendingCats: string[] | null = null;
   let layerReady = false;
+
+  function buildMainFilter(date: string): unknown {
+    const dateClause: unknown = ['<=', ['get', 'date'], date];
+    const catClause: unknown = pendingCats
+      ? ['in', ['get', 'category'], ['literal', pendingCats]]
+      : null;
+    return catClause ? ['all', dateClause, catClause] : dateClause;
+  }
 
   let rafScheduled = false;
   function applyPending(): void {
@@ -48,7 +58,7 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
     requestAnimationFrame(() => {
       rafScheduled = false;
       if (pendingDate !== null && map.getLayer(LAYER_ID)) {
-        map.setFilter(LAYER_ID, ['<=', ['get', 'date'], pendingDate]);
+        map.setFilter(LAYER_ID, buildMainFilter(pendingDate) as never);
       }
       if (map.getLayer(HOVERED_ID)) {
         map.setFilter(HOVERED_ID, ['==', ['get', 'id'], pendingHoveredId ?? '']);
@@ -104,6 +114,10 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
     },
     setHoveredId(id: string | null): void {
       pendingHoveredId = id;
+      if (layerReady) applyPending();
+    },
+    setCategoryFilter(cats: string[] | null): void {
+      pendingCats = cats;
       if (layerReady) applyPending();
     },
   };

@@ -660,6 +660,48 @@ button { font-family: inherit; }
   padding-top: 8px;
 }
 
+#layer-toggle .lt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+
+#layer-toggle .lt-group {
+  margin-bottom: 1px;
+}
+
+#layer-toggle .lt-disclosure {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--ink-3);
+  padding: 0 4px;
+  line-height: 1;
+}
+#layer-toggle .lt-disclosure:hover { color: var(--ink-1); }
+
+#layer-toggle .lt-subrows {
+  margin: 2px 0 4px 22px;
+  padding-left: 6px;
+  border-left: 1px solid var(--hairline);
+}
+
+#layer-toggle .lt-subrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
    Hover tooltip
    ─────────────────────────────────────────────────────────────────────────── */
