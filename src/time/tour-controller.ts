@@ -6,11 +6,20 @@ export interface TourSidePanel {
   close(): void;
 }
 
+export interface TourNarrator {
+  show(ev: TimelineEvent): void;
+  hide(): void;
+}
+
 export interface TourControllerOpts {
   events: TimelineEvent[];
   timeCtrl: TimeController;
   panel: TourSidePanel;
-  perEventMs?: number;  // default 4500
+  narrator: TourNarrator;
+  // Move the map camera. Receives the event's focus (lat/lon/zoom) or `null`
+  // for "reset to the default Gaza-wide view".
+  cameraEaseTo: (target: { lat: number; lon: number; zoom?: number } | null) => void;
+  perEventMs?: number;  // default 5500
   onStateChange?: (isPlaying: boolean) => void;
 }
 
@@ -18,6 +27,8 @@ export class TourController {
   private events: TimelineEvent[];
   private timeCtrl: TimeController;
   private panel: TourSidePanel;
+  private narrator: TourNarrator;
+  private cameraEaseTo: (target: { lat: number; lon: number; zoom?: number } | null) => void;
   private perEventMs: number;
   private onStateChange?: (isPlaying: boolean) => void;
   private currentIdx = -1;
@@ -28,7 +39,9 @@ export class TourController {
     this.events = [...opts.events].sort((a, b) => a.date.localeCompare(b.date));
     this.timeCtrl = opts.timeCtrl;
     this.panel = opts.panel;
-    this.perEventMs = opts.perEventMs ?? 4500;
+    this.narrator = opts.narrator;
+    this.cameraEaseTo = opts.cameraEaseTo;
+    this.perEventMs = opts.perEventMs ?? 5500;
     this.onStateChange = opts.onStateChange;
   }
 
@@ -48,6 +61,8 @@ export class TourController {
     if (!this._isPlaying) return;
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     this.panel.close();
+    this.narrator.hide();
+    this.cameraEaseTo(null);
     this._isPlaying = false;
     this.onStateChange?.(false);
   }
@@ -62,6 +77,8 @@ export class TourController {
     if (this.currentIdx >= this.events.length) {
       // After last event, sweep to the end and stop
       this.panel.close();
+      this.narrator.hide();
+      this.cameraEaseTo(null);
       const finalDate = this.timeCtrl.end;
       this.timeCtrl.setDate(finalDate);
       this._isPlaying = false;
@@ -70,7 +87,12 @@ export class TourController {
     }
     const ev = this.events[this.currentIdx];
     this.timeCtrl.setDate(ev.date);
+    // Fly to the event's focus if one is set, else reset to the wide view.
+    // Gaza-wide events (ceasefires, broad offensives) intentionally have no
+    // focus so the camera stays / returns to the strip-wide flat angle.
+    this.cameraEaseTo(ev.focus ?? null);
     this.panel.showEventCard(ev);
+    this.narrator.show(ev);
     this.timer = setTimeout(() => {
       if (!this._isPlaying) return; // cancelled
       this.next();

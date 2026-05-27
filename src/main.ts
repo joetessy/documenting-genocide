@@ -16,7 +16,7 @@ import { mountHeader } from './ui/header';
 import { mountAboutModal } from './ui/about-modal';
 import { mountOnboarding } from './ui/onboarding-overlay';
 import { parseHash, formatHash } from './url-state';
-import { TIMELINE_EVENTS } from './data/timeline-events';
+import { TIMELINE_EVENTS, type TimelineEvent } from './data/timeline-events';
 
 async function start(): Promise<void> {
   const app = document.getElementById('app');
@@ -176,6 +176,11 @@ async function start(): Promise<void> {
   requestAnimationFrame(drawHistogram);
   window.addEventListener('resize', drawHistogram);
 
+  // Narrator overlay — large title + description above the scrubber, visible
+  // throughout each tour stop so the user can actually read the event context
+  // (the side panel often gets obscured by the map / a click).
+  const narrator = mountTourNarrator(app);
+
   // Tour controller — auto-advances through the 14 timeline events with a
   // brief pause + side-panel context at each. Click to start/stop.
   const tour = new TourController({
@@ -185,7 +190,27 @@ async function start(): Promise<void> {
       showEventCard(ev) { sidePanel.openTimelineEvent(ev, `Tour stop · ${ev.date}`); },
       close() { sidePanel.close(); },
     },
-    perEventMs: 4500,
+    narrator,
+    cameraEaseTo(target) {
+      if (target) {
+        map.easeTo({
+          center: [target.lon, target.lat],
+          zoom: target.zoom ?? 13,
+          pitch: 30,
+          duration: 1400,
+        });
+      } else {
+        // Reset to default Gaza-wide flat view.
+        map.easeTo({
+          center: [34.40, 31.42],
+          zoom: 11,
+          pitch: 0,
+          bearing: 0,
+          duration: 1400,
+        });
+      }
+    },
+    perEventMs: 5500,
     onStateChange(isPlaying) {
       tourBtn.textContent = isPlaying ? '◼ Stop tour' : '▸ Tour';
       tourBtn.classList.toggle('is-playing', isPlaying);
@@ -347,6 +372,32 @@ function mountRotationHint(parent: HTMLElement): void {
   el.id = 'rotation-hint';
   el.innerHTML = 'Drag the compass to rotate &amp; tilt, or hold <kbd>Ctrl</kbd> while dragging the map.';
   parent.appendChild(el);
+}
+
+// Floating narrator block that sits above the scrubber during a tour. Shows
+// the current event's date, title, and one-sentence description so the user
+// has the context in their primary line of sight, not buried in the side panel.
+function mountTourNarrator(parent: HTMLElement): { show(ev: TimelineEvent): void; hide(): void } {
+  const el = document.createElement('div');
+  el.id = 'tour-narrator';
+  parent.appendChild(el);
+  return {
+    show(ev) {
+      el.innerHTML = `
+        <div class="tn-date">${ev.date}</div>
+        <div class="tn-title">${escapeHtml(ev.title)}</div>
+        <div class="tn-desc">${escapeHtml(ev.description)}</div>
+      `;
+      el.classList.add('is-open');
+    },
+    hide() {
+      el.classList.remove('is-open');
+    },
+  };
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
 }
 
 start().catch((err) => {
