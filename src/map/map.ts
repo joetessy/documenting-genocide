@@ -42,7 +42,7 @@ export function mountMap(container: HTMLElement): Map {
       showCompass: true,
       showZoom: true,
     }),
-    'top-right',
+    'bottom-right',
   );
   // Attribution is intentionally suppressed on the map surface (it was
   // visually obscuring content) and surfaced instead in the About modal,

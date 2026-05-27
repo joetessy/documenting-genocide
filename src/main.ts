@@ -4,6 +4,7 @@ import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
 import { mountFacilityLayer } from './map/facility-layer';
+import { mountTimelineEventLayer } from './map/timeline-event-layer';
 import { loadIncidents, loadDamage, loadFacilities, loadCasualtyToll } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { TourController } from './time/tour-controller';
@@ -15,7 +16,6 @@ import { mountLoading } from './ui/loading';
 import { mountLayerToggle } from './ui/layer-toggle';
 import { mountHeader } from './ui/header';
 import { mountAboutModal } from './ui/about-modal';
-import { mountLegend } from './ui/legend';
 import { mountOnboarding } from './ui/onboarding-overlay';
 import { parseHash, formatHash } from './url-state';
 import { TIMELINE_EVENTS, type TimelineEvent } from './data/timeline-events';
@@ -32,7 +32,6 @@ async function start(): Promise<void> {
   app.appendChild(mapEl);
 
   const map = mountMap(mapEl);
-  mountRotationHint(app);
   mountOnboarding(app);
 
   const aboutModal = mountAboutModal(app);
@@ -40,11 +39,9 @@ async function start(): Promise<void> {
   aboutBtn.id = 'about-trigger';
   aboutBtn.type = 'button';
   aboutBtn.textContent = 'About';
-  aboutBtn.setAttribute('aria-label', 'About this exhibit');
+  aboutBtn.setAttribute('aria-label', 'About');
   aboutBtn.addEventListener('click', () => aboutModal.open());
   app.appendChild(aboutBtn);
-
-  mountLegend(app);
 
   loading.setStatus('Loading incident data…');
   const { incidents, meta } = await loadIncidents();
@@ -77,7 +74,10 @@ async function start(): Promise<void> {
   damage.setVisible(true);
 
   const facilityLayer = await mountFacilityLayer(map, facilities);
-  // Default off — facilities are a static reference overlay.
+  facilityLayer.setVisible('health', true);
+  facilityLayer.setVisible('education', true);
+
+  const timelineEventLayer = mountTimelineEventLayer(map, TIMELINE_EVENTS);
 
   const layerToggle = mountLayerToggle(app);
   layerToggle.onChange((s) => {
@@ -164,11 +164,13 @@ async function start(): Promise<void> {
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
     scheduleDamageUpdate(date);
+    timelineEventLayer.setVisibleDate(date);
     header.updateForDate(date);
     scheduleHashUpdate(date);
   });
   markers.setVisibleDate(timeCtrl.currentDate);
   damage.setVisibleDate(timeCtrl.currentDate);
+  timelineEventLayer.setVisibleDate(timeCtrl.currentDate);
   header.updateForDate(timeCtrl.currentDate);
 
   // Deep-link: if the URL hash names an incident, open its side panel.
@@ -191,10 +193,61 @@ async function start(): Promise<void> {
     damageBuckets,
     timeCtrl.start,
     TIMELINE_EVENTS,
-    (ev) => { timeCtrl.setDate(ev.date); },
+    (ev) => { focusTimelineEvent(ev); },
   );
   requestAnimationFrame(drawHistogram);
   window.addEventListener('resize', drawHistogram);
+
+  // Timeline-event focus mode — clicking an event tick on the histogram
+  // behaves like a single tour stop: the camera eases to the event's focus,
+  // the radar pulse marks the spot, and the narrator card appears. Unlike
+  // the tour, it doesn't auto-advance. Dismiss conditions are handled in
+  // the map click handler below.
+  let timelineFocusActive = false;
+  function focusTimelineEvent(ev: TimelineEvent): void {
+    if (tour.isPlaying) tour.stop();
+    sidePanel.close();
+    setHashIncident(null);
+    timelineFocusActive = true;
+    timeCtrl.setDate(ev.date);
+    if (ev.focus) {
+      map.easeTo({
+        center: [ev.focus.lon, ev.focus.lat],
+        zoom: ev.focus.zoom ?? 14,
+        pitch: ev.focus.pitch ?? 40,
+        bearing: ev.focus.bearing ?? 0,
+        duration: 1800,
+      });
+      showLandmarkHighlight(map, ev.focus.lat, ev.focus.lon);
+    } else {
+      // Non-localized events (ceasefires, broad offensives) pull back to the
+      // wide Gaza view so the narrator card has the whole Strip as context.
+      map.easeTo({
+        center: [34.40, 31.42],
+        zoom: 11,
+        pitch: 0,
+        bearing: 0,
+        duration: 1500,
+      });
+      hideLandmarkHighlight(map);
+    }
+    narrator.show(ev);
+  }
+  function clearTimelineFocus(opts: { resetCamera: boolean }): void {
+    if (!timelineFocusActive) return;
+    timelineFocusActive = false;
+    narrator.hide();
+    hideLandmarkHighlight(map);
+    if (opts.resetCamera) {
+      map.easeTo({
+        center: [34.40, 31.42],
+        zoom: 11,
+        pitch: 0,
+        bearing: 0,
+        duration: 1200,
+      });
+    }
+  }
 
   // Narrator card — large title + description in the bottom-right during tour
   // mode. Replaces the side panel as the per-stop info surface so the user has
@@ -214,8 +267,9 @@ async function start(): Promise<void> {
         map.easeTo({
           center: [target.lon, target.lat],
           zoom: target.zoom ?? 14,
-          pitch: 40,           // slightly more dramatic 3D
-          duration: 1800,       // slower fly for more drama
+          pitch: target.pitch ?? 40,
+          bearing: target.bearing ?? 0,
+          duration: 1800,
         });
       } else {
         // Reset to default Gaza-wide flat view.
@@ -234,17 +288,30 @@ async function start(): Promise<void> {
     },
     perEventMs: 7500,
     onStateChange(isPlaying) {
-      tourBtn.textContent = isPlaying ? 'Stop the tour' : 'Start the tour';
+      tourLabel.textContent = isPlaying ? 'Stop the tour' : 'Take the tour';
+      tourGlyph.innerHTML = isPlaying ? TOUR_GLYPH_STOP : TOUR_GLYPH_PLAY;
       tourBtn.classList.toggle('is-playing', isPlaying);
     },
   });
 
+  const TOUR_GLYPH_PLAY = '<svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><polygon points="2.5,1.5 2.5,8.5 8.5,5" fill="currentColor"/></svg>';
+  const TOUR_GLYPH_STOP = '<svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><rect x="2.5" y="2.5" width="5" height="5" fill="currentColor"/></svg>';
+
   const tourBtn = document.createElement('button');
   tourBtn.id = 'tour-btn';
   tourBtn.type = 'button';
-  tourBtn.textContent = 'Start the tour';
+  const tourGlyph = document.createElement('span');
+  tourGlyph.className = 'tour-glyph';
+  tourGlyph.innerHTML = TOUR_GLYPH_PLAY;
+  const tourLabel = document.createElement('span');
+  tourLabel.className = 'tour-label';
+  tourLabel.textContent = 'Take the tour';
+  tourBtn.append(tourGlyph, tourLabel);
   tourBtn.setAttribute('aria-label', 'Start the guided tour of major events');
-  tourBtn.addEventListener('click', () => tour.toggle());
+  tourBtn.addEventListener('click', () => {
+    clearTimelineFocus({ resetCamera: false });  // tour will set its own camera
+    tour.toggle();
+  });
   app.appendChild(tourBtn);
 
   // Clicking the map during a tour cancels it (intent: user wants to explore on their own).
@@ -273,14 +340,16 @@ async function start(): Promise<void> {
 
   // One click handler that picks the topmost relevant layer at the click
   // point and routes to the right panel. Layer priority (highest wins):
-  //   1. incidents-circles    — red dots, the most "story-bearing" markers
-  //   2. facilities-health    — cyan dots, named civilian buildings
-  //   3. facilities-education — violet dots, schools/universities
-  //   4. damage-circles       — generic damage layer, lowest priority
+  //   1. timeline-event-circles — curated major-event markers (white/red rings)
+  //   2. incidents-circles      — red dots, the most "story-bearing" markers
+  //   3. facilities-health      — cyan dots, named civilian buildings
+  //   4. facilities-education   — violet dots, schools/universities
+  //   5. damage-circles         — generic damage layer, lowest priority
   // This replaces the previous per-layer click handlers, which all fired
   // for the same click and let the last-registered handler (damage)
   // overwrite the panel that an earlier one (incidents) had set.
   const CLICK_LAYER_PRIORITY = [
+    'timeline-event-circles',
     'incidents-circles',
     'facilities-health',
     'facilities-education',
@@ -302,14 +371,25 @@ async function start(): Promise<void> {
     if (hits.length === 0) {
       sidePanel.close();
       setHashIncident(null);
+      clearTimelineFocus({ resetCamera: true });
       return;
     }
+    // Feature was clicked: drop the curated overlay but keep the camera
+    // where it is so the user lands on what they clicked.
+    clearTimelineFocus({ resetCamera: false });
     for (const layerId of CLICK_LAYER_PRIORITY) {
       const hit = hits.find((h) => h.layer.id === layerId);
       if (!hit) continue;
       const id = hit.properties?.id as string | undefined;
       if (!id) return;
-      if (layerId === 'incidents-circles') {
+      if (layerId === 'timeline-event-circles') {
+        const idx = hit.properties?.eventIndex as number | undefined;
+        const ev = typeof idx === 'number' ? TIMELINE_EVENTS[idx] : undefined;
+        if (ev) {
+          sidePanel.openTimelineEvent(ev);
+          setHashIncident(null);
+        }
+      } else if (layerId === 'incidents-circles') {
         const incident = byId.get(id);
         if (incident) {
           sidePanel.openIncident(incident);
@@ -347,10 +427,11 @@ async function start(): Promise<void> {
   // overlap dense data clusters.
   function lift(): void {
     // Final stack order, top to bottom:
-    //   place-city          (labels foreground)
+    //   place-city                  (labels foreground)
     //   place-neighbourhood
-    //   incidents-hovered   (red ring around hovered incident)
-    //   incidents-circles   (red dots)
+    //   timeline-event-circles      (white/red ring "target" markers — always findable)
+    //   incidents-hovered           (red ring around hovered incident)
+    //   incidents-circles           (red dots)
     //   facilities-health
     //   facilities-education
     //   damage-circles
@@ -363,6 +444,7 @@ async function start(): Promise<void> {
       'facilities-health',
       'incidents-circles',
       'incidents-hovered',
+      'timeline-event-circles',
       'place-neighbourhood',
       'place-city',
     ]) {
@@ -398,13 +480,6 @@ async function start(): Promise<void> {
 }
 
 
-function mountRotationHint(parent: HTMLElement): void {
-  const el = document.createElement('div');
-  el.id = 'rotation-hint';
-  el.innerHTML = 'Drag the compass to rotate &amp; tilt, or hold <kbd>Ctrl</kbd> while dragging the map.';
-  parent.appendChild(el);
-}
-
 // Bottom-right narrator card shown during a tour. Replaces the side panel as
 // the per-stop info surface — single predictable location with date, title,
 // and one- to two-sentence description in the user's peripheral vision while
@@ -432,12 +507,19 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
 }
 
-// Pulsing landmark highlight — a red ring that grows + fades on a 1.6s loop
-// to mark the focused event location during each tour stop. Implemented as a
-// circle layer with paint properties driven by setInterval rather than a CSS
-// animation because the layer lives in MapLibre's render pipeline.
+// Radar landmark highlight — three phase-staggered rings that each emanate
+// from the centre and fade as they expand, never contracting. The three rings
+// are 1/3 of a period apart, so at any instant the viewer sees a new wave
+// emerging, a mid-wave at full spread, and a faded outer wave — the visual
+// signature of a radar sweep.
 const LANDMARK_SOURCE = 'tour-landmark';
-const LANDMARK_LAYER = 'tour-landmark-pulse';
+const LANDMARK_LAYER_IDS = [
+  'tour-landmark-pulse-0',
+  'tour-landmark-pulse-1',
+] as const;
+const PULSE_PERIOD_MS = 3400;
+const PULSE_R_MIN = 5;
+const PULSE_R_MAX = 70;
 let landmarkPulseTimer: number | null = null;
 
 function showLandmarkHighlight(map: import('maplibre-gl').Map, lat: number, lon: number): void {
@@ -448,41 +530,52 @@ function showLandmarkHighlight(map: import('maplibre-gl').Map, lat: number, lon:
   };
   if (!map.getSource(LANDMARK_SOURCE)) {
     map.addSource(LANDMARK_SOURCE, { type: 'geojson', data: featureData });
-    map.addLayer({
-      id: LANDMARK_LAYER,
-      type: 'circle',
-      source: LANDMARK_SOURCE,
-      paint: {
-        'circle-radius': 6,
-        'circle-color': 'transparent',
-        'circle-stroke-color': '#e63946',
-        'circle-stroke-width': 2,
-        'circle-stroke-opacity': 1,
-      },
-    });
+    for (const id of LANDMARK_LAYER_IDS) {
+      map.addLayer({
+        id,
+        type: 'circle',
+        source: LANDMARK_SOURCE,
+        paint: {
+          'circle-radius': PULSE_R_MIN,
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#e63946',
+          'circle-stroke-width': 1.6,
+          'circle-stroke-opacity': 0,
+        },
+      });
+    }
   } else {
     (map.getSource(LANDMARK_SOURCE) as maplibregl.GeoJSONSource).setData(featureData);
-    map.setLayoutProperty(LANDMARK_LAYER, 'visibility', 'visible');
+    for (const id of LANDMARK_LAYER_IDS) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+    }
   }
-  // Pulse the ring: radius grows from 6 to ~62 and fades from 1.0 to 0 over 1.6s,
-  // looping. Use setInterval driving setPaintProperty.
   if (landmarkPulseTimer !== null) clearInterval(landmarkPulseTimer);
   const start = performance.now();
   landmarkPulseTimer = window.setInterval(() => {
-    const t = ((performance.now() - start) % 1600) / 1600;  // 0 → 1 every 1.6s
-    const radius = 6 + t * 56;     // 6 → 62 px
-    const opacity = 1 - t;          // 1 → 0
-    if (map.getLayer(LANDMARK_LAYER)) {
-      map.setPaintProperty(LANDMARK_LAYER, 'circle-radius', radius);
-      map.setPaintProperty(LANDMARK_LAYER, 'circle-stroke-opacity', opacity);
-    }
+    const now = performance.now();
+    LANDMARK_LAYER_IDS.forEach((id, i) => {
+      if (!map.getLayer(id)) return;
+      // Phase offset of i/3 of a period keeps a new wave emerging while the
+      // previous two are still propagating outward.
+      const phase = (i * PULSE_PERIOD_MS) / LANDMARK_LAYER_IDS.length;
+      const t = (((now - start) + phase) % PULSE_PERIOD_MS) / PULSE_PERIOD_MS;
+      // easeOutQuad on radius: each wave appears to slow and lose energy
+      // as it spreads — true radar character.
+      const eased = 1 - (1 - t) * (1 - t);
+      const radius = PULSE_R_MIN + eased * (PULSE_R_MAX - PULSE_R_MIN);
+      // Quick fade-in at wave birth (first 10% of cycle), then slow fade out.
+      const opacity = t < 0.1 ? t / 0.1 * 0.9 : 0.9 * (1 - (t - 0.1) / 0.9);
+      map.setPaintProperty(id, 'circle-radius', radius);
+      map.setPaintProperty(id, 'circle-stroke-opacity', opacity);
+    });
   }, 40);
 }
 
 function hideLandmarkHighlight(map: import('maplibre-gl').Map): void {
   if (landmarkPulseTimer !== null) { clearInterval(landmarkPulseTimer); landmarkPulseTimer = null; }
-  if (map.getLayer(LANDMARK_LAYER)) {
-    map.setLayoutProperty(LANDMARK_LAYER, 'visibility', 'none');
+  for (const id of LANDMARK_LAYER_IDS) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
   }
 }
 
