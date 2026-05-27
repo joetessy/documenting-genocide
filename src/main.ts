@@ -3,7 +3,7 @@ import { mountMap } from './map/map';
 import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
 import { mountFacilityLayer } from './map/facility-layer';
-import { loadIncidents, loadDamage, loadFacilities } from './data/loader';
+import { loadIncidents, loadDamage, loadFacilities, loadCasualtyToll } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { mountScrubber } from './time/scrubber';
 import { bucketByDay, bucketDamageByDay, renderHistogram } from './time/histogram';
@@ -47,11 +47,19 @@ async function start(): Promise<void> {
   const damageData = await loadDamage();
   console.log(`Loaded ${damageData.features.length} damage features`);
 
+  loading.setStatus('Loading casualty figures…');
+  const casualtyToll = await loadCasualtyToll();
+  console.log(`Loaded ${casualtyToll.length} daily casualty data points`);
+
   loading.setStatus('Loading facilities…');
   const facilities = await loadFacilities();
   console.log(`Loaded ${facilities.length} facilities`);
 
-  const header = mountHeader(app, { incidents, damageFeatures: damageData.features });
+  const header = mountHeader(app, {
+    incidents,
+    damageFeatures: damageData.features,
+    casualtyToll,
+  });
 
   const markers = mountMarkers(map, incidents);
   const tooltip = mountTooltip(app);
