@@ -33,6 +33,18 @@ const SOURCES = [
     contribution: '196,141 damage features form the geographic backdrop; click any dot for the per-building assessment history.',
   },
   {
+    name: 'Centre for Information Resilience — Israel-Gaza Conflict Map',
+    url: 'https://www.info-res.org/israel-gaza-war/maps/israel-gaza-conflict-map/',
+    description:
+      "CIR's verified-incident database, built through open-source intelligence and rigorous source corroboration. " +
+      'Each record includes one or more public source links (often social media posts or news coverage) ' +
+      'and a categorization across damage, casualties, and other harm types.',
+    license:
+      'Used with explicit written permission from CIR (2026). Attribution: "Centre for Information Resilience" on first mention, "CIR" afterwards.',
+    contribution:
+      "2,255 features verified by CIR's OSINT team add substantial breadth to the incident layer, particularly for events with social-media evidence trails.",
+  },
+  {
     name: 'HOT/OpenStreetMap (Palestine) — health & education facilities',
     url: 'https://data.humdata.org/dataset/hotosm_pse_health_facilities',
     description:
