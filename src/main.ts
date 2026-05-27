@@ -15,6 +15,7 @@ import { mountLoading } from './ui/loading';
 import { mountLayerToggle } from './ui/layer-toggle';
 import { mountHeader } from './ui/header';
 import { mountAboutModal } from './ui/about-modal';
+import { mountLegend } from './ui/legend';
 import { mountOnboarding } from './ui/onboarding-overlay';
 import { parseHash, formatHash } from './url-state';
 import { TIMELINE_EVENTS, type TimelineEvent } from './data/timeline-events';
@@ -42,6 +43,8 @@ async function start(): Promise<void> {
   aboutBtn.setAttribute('aria-label', 'About this exhibit');
   aboutBtn.addEventListener('click', () => aboutModal.open());
   app.appendChild(aboutBtn);
+
+  mountLegend(app);
 
   loading.setStatus('Loading incident data…');
   const { incidents, meta } = await loadIncidents();
