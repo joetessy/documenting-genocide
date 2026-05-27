@@ -4,6 +4,7 @@ import type {
   CredibilityRating,
   SourceAttribution,
 } from '../shared/types';
+import { isInGazaPolygon } from '../shared/gaza-polygon';
 import { type ArticleData, slugFromLink } from './scrape-airwars-articles';
 
 export type { ArticleData };
@@ -70,10 +71,6 @@ export function pickPrimaryCoord(geos: RawGeo[]): { lat: number; lon: number } |
   if (lat < -90 || lat > 90) return null;
   if (lon < -180 || lon > 180) return null;
   return { lat, lon };
-}
-
-export function isInGazaBbox(lat: number, lon: number): boolean {
-  return lat >= 31.20 && lat <= 31.60 && lon >= 34.20 && lon <= 34.60;
 }
 
 function pickCasualtyMax(bucket: RawCasualtyBucket | undefined, key: 'killed_max' | 'injured_max'): number | null {
@@ -160,7 +157,7 @@ export function normalizeAirwarsRecord(
 
   const coord = pickPrimaryCoord(raw.acf?.geolocations ?? []);
   if (!coord) return null;
-  if (!isInGazaBbox(coord.lat, coord.lon)) return null;
+  if (!isInGazaPolygon(coord.lat, coord.lon)) return null;
 
   // Raw refCode may have surrounding whitespace ("ISPT0097 ") — always trim.
   const rawRefCode = (raw.acf?.unique_reference_code ?? '').trim();

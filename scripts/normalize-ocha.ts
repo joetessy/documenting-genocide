@@ -1,10 +1,7 @@
 import type { DamageRecord, DamageStatus } from '../shared/types';
+import { isInGazaPolygon } from '../shared/gaza-polygon';
 
 const HDX_URL = 'https://data.humdata.org/dataset/unosat-gaza-strip-comprehensive-damage-assessment-11-october-2025';
-
-function isInGazaBbox(lat: number, lon: number): boolean {
-  return lat >= 31.20 && lat <= 31.60 && lon >= 34.20 && lon <= 34.60;
-}
 
 const DAMAGE_MAP: Record<number, DamageStatus> = {
   1: 'destroyed',
@@ -45,7 +42,7 @@ export function normalizeOchaFeature(feat: GeoJSON.Feature): DamageRecord | null
   if (feat.geometry?.type !== 'Point') return null;
   const [lon, lat] = feat.geometry.coordinates as [number, number];
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (!isInGazaBbox(lat, lon)) return null;
+  if (!isInGazaPolygon(lat, lon)) return null;
 
   const firstDate = p.first_damage_date;
   if (typeof firstDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(firstDate)) return null;

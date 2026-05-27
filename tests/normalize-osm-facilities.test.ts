@@ -47,7 +47,7 @@ const POLYGON_FEATURE: Feature = {
 
 const FALLBACK_HEALTHCARE_FEATURE: Feature = {
   type: 'Feature',
-  geometry: { type: 'Point', coordinates: [34.40, 31.40] },
+  geometry: { type: 'Point', coordinates: [34.38, 31.41] },
   properties: { id: 'node/77', name: 'Healthcare Center', amenity: null, healthcare: 'clinic', adm2_name: 'Khan Younis' },
 };
 
@@ -104,7 +104,7 @@ describe('normalizeOsmFacility', () => {
   it('handles missing name_ar gracefully (returns record without it)', () => {
     const noAr: Feature = {
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [34.45, 31.4] },
+      geometry: { type: 'Point', coordinates: [34.38, 31.41] },
       properties: { id: 'node/12', name: 'English Only', amenity: 'hospital' },
     };
     const r = normalizeOsmFacility(noAr)!;
@@ -115,7 +115,7 @@ describe('normalizeOsmFacility', () => {
   it('handles missing governorate gracefully', () => {
     const noGov: Feature = {
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [34.45, 31.4] },
+      geometry: { type: 'Point', coordinates: [34.38, 31.41] },
       properties: { id: 'node/13', name: 'Mystery Clinic', amenity: 'clinic' },
     };
     const r = normalizeOsmFacility(noGov)!;

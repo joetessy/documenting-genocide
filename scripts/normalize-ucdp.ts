@@ -1,4 +1,5 @@
 import type { Incident, IncidentCategory, SourceAttribution } from '../shared/types';
+import { isInGazaPolygon } from '../shared/gaza-polygon';
 
 interface UcdpRow {
   id: string;
@@ -11,10 +12,6 @@ interface UcdpRow {
   best: string;
   source_headline: string;
   dyad_name: string;
-}
-
-function isInGazaBbox(lat: number, lon: number): boolean {
-  return lat >= 31.20 && lat <= 31.60 && lon >= 34.20 && lon <= 34.60;
 }
 
 const HEADLINE_KEYWORDS: Array<{ pattern: RegExp; category: IncidentCategory }> = [
@@ -56,7 +53,7 @@ export function normalizeUcdpRecord(row: UcdpRow): Incident | null {
   const lat = Number(row.latitude);
   const lon = Number(row.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (!isInGazaBbox(lat, lon)) return null;
+  if (!isInGazaPolygon(lat, lon)) return null;
 
   const best = Number(row.best);
   const killed = Number.isFinite(best) ? best : null;
