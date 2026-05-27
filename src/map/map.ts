@@ -12,9 +12,10 @@ const NAV_BOUNDS: [[number, number], [number, number]] = [
 
 const GAZA_CENTER: [number, number] = [34.40, 31.42];
 
-// Pure white for both the flat mask + the 3D "containment wall" that occludes
-// anything outside Gaza when tilted. Matches the new pen-and-ink basemap.
-const MASK_COLOR = '#ffffff';
+// Warm dark charcoal for both the flat mask + the 3D "containment wall" that
+// occludes anything outside Gaza when tilted. Inverts the cream/paper tones of
+// the basemap so Gaza floats as a brighter island against a darker frame.
+const MASK_COLOR = '#2b2826';
 
 export function mountMap(container: HTMLElement): Map {
   const map = new maplibregl.Map({

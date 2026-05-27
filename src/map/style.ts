@@ -227,9 +227,9 @@ export function gazaStyle(): StyleSpecification {
     },
     layers: LAYERS,
     sky: {
-      'sky-color': '#ffffff',
-      'horizon-color': '#ececec',
-      'fog-color': '#ffffff',
+      'sky-color': '#2b2826',
+      'horizon-color': '#3a3530',
+      'fog-color': '#2b2826',
       'fog-ground-blend': 0.6,
       'horizon-fog-blend': 0.85,
       'sky-horizon-blend': 0.6,
