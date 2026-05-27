@@ -196,28 +196,26 @@ async function start(): Promise<void> {
   requestAnimationFrame(drawHistogram);
   window.addEventListener('resize', drawHistogram);
 
-  // Narrator overlay — large title + description above the scrubber, visible
-  // throughout each tour stop so the user can actually read the event context
-  // (the side panel often gets obscured by the map / a click).
+  // Narrator card — large title + description in the bottom-right during tour
+  // mode. Replaces the side panel as the per-stop info surface so the user has
+  // a single, predictable place to read each event without the map getting
+  // obscured.
   const narrator = mountTourNarrator(app);
 
   // Tour controller — auto-advances through the 14 timeline events with a
-  // brief pause + side-panel context at each. Click to start/stop.
+  // pulsing landmark ring + bottom-right narrator card at each. Click to
+  // start/stop.
   const tour = new TourController({
     events: TIMELINE_EVENTS,
     timeCtrl,
-    panel: {
-      showEventCard(ev) { sidePanel.openTimelineEvent(ev, `Tour stop · ${ev.date}`); },
-      close() { sidePanel.close(); },
-    },
     narrator,
     cameraEaseTo(target) {
       if (target) {
         map.easeTo({
           center: [target.lon, target.lat],
-          zoom: target.zoom ?? 13,
-          pitch: 30,
-          duration: 1400,
+          zoom: target.zoom ?? 14,
+          pitch: 40,           // slightly more dramatic 3D
+          duration: 1800,       // slower fly for more drama
         });
       } else {
         // Reset to default Gaza-wide flat view.
@@ -226,13 +224,17 @@ async function start(): Promise<void> {
           zoom: 11,
           pitch: 0,
           bearing: 0,
-          duration: 1400,
+          duration: 1800,
         });
       }
     },
-    perEventMs: 5500,
+    highlightLandmark(target) {
+      if (target) showLandmarkHighlight(map, target.lat, target.lon);
+      else hideLandmarkHighlight(map);
+    },
+    perEventMs: 7500,
     onStateChange(isPlaying) {
-      tourBtn.textContent = isPlaying ? '◼ Stop tour' : '▸ Tour';
+      tourBtn.textContent = isPlaying ? 'Stop the tour' : 'Start the tour';
       tourBtn.classList.toggle('is-playing', isPlaying);
     },
   });
@@ -240,8 +242,8 @@ async function start(): Promise<void> {
   const tourBtn = document.createElement('button');
   tourBtn.id = 'tour-btn';
   tourBtn.type = 'button';
-  tourBtn.textContent = '▸ Tour';
-  tourBtn.setAttribute('aria-label', 'Start guided tour of major events');
+  tourBtn.textContent = 'Start the tour';
+  tourBtn.setAttribute('aria-label', 'Start the guided tour of major events');
   tourBtn.addEventListener('click', () => tour.toggle());
   app.appendChild(tourBtn);
 
@@ -403,19 +405,20 @@ function mountRotationHint(parent: HTMLElement): void {
   parent.appendChild(el);
 }
 
-// Floating narrator block that sits above the scrubber during a tour. Shows
-// the current event's date, title, and one-sentence description so the user
-// has the context in their primary line of sight, not buried in the side panel.
+// Bottom-right narrator card shown during a tour. Replaces the side panel as
+// the per-stop info surface — single predictable location with date, title,
+// and one- to two-sentence description in the user's peripheral vision while
+// the map carries the spatial story.
 function mountTourNarrator(parent: HTMLElement): { show(ev: TimelineEvent): void; hide(): void } {
   const el = document.createElement('div');
-  el.id = 'tour-narrator';
+  el.id = 'tour-card';
   parent.appendChild(el);
   return {
     show(ev) {
       el.innerHTML = `
-        <div class="tn-date">${ev.date}</div>
-        <div class="tn-title">${escapeHtml(ev.title)}</div>
-        <div class="tn-desc">${escapeHtml(ev.description)}</div>
+        <div class="tc-date">${ev.date}</div>
+        <h3 class="tc-title">${escapeHtml(ev.title)}</h3>
+        <p class="tc-desc">${escapeHtml(ev.description)}</p>
       `;
       el.classList.add('is-open');
     },
@@ -427,6 +430,60 @@ function mountTourNarrator(parent: HTMLElement): { show(ev: TimelineEvent): void
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
+}
+
+// Pulsing landmark highlight — a red ring that grows + fades on a 1.6s loop
+// to mark the focused event location during each tour stop. Implemented as a
+// circle layer with paint properties driven by setInterval rather than a CSS
+// animation because the layer lives in MapLibre's render pipeline.
+const LANDMARK_SOURCE = 'tour-landmark';
+const LANDMARK_LAYER = 'tour-landmark-pulse';
+let landmarkPulseTimer: number | null = null;
+
+function showLandmarkHighlight(map: import('maplibre-gl').Map, lat: number, lon: number): void {
+  const featureData = {
+    type: 'Feature' as const,
+    properties: {},
+    geometry: { type: 'Point' as const, coordinates: [lon, lat] },
+  };
+  if (!map.getSource(LANDMARK_SOURCE)) {
+    map.addSource(LANDMARK_SOURCE, { type: 'geojson', data: featureData });
+    map.addLayer({
+      id: LANDMARK_LAYER,
+      type: 'circle',
+      source: LANDMARK_SOURCE,
+      paint: {
+        'circle-radius': 6,
+        'circle-color': 'transparent',
+        'circle-stroke-color': '#e63946',
+        'circle-stroke-width': 2,
+        'circle-stroke-opacity': 1,
+      },
+    });
+  } else {
+    (map.getSource(LANDMARK_SOURCE) as maplibregl.GeoJSONSource).setData(featureData);
+    map.setLayoutProperty(LANDMARK_LAYER, 'visibility', 'visible');
+  }
+  // Pulse the ring: radius grows from 6 to ~62 and fades from 1.0 to 0 over 1.6s,
+  // looping. Use setInterval driving setPaintProperty.
+  if (landmarkPulseTimer !== null) clearInterval(landmarkPulseTimer);
+  const start = performance.now();
+  landmarkPulseTimer = window.setInterval(() => {
+    const t = ((performance.now() - start) % 1600) / 1600;  // 0 → 1 every 1.6s
+    const radius = 6 + t * 56;     // 6 → 62 px
+    const opacity = 1 - t;          // 1 → 0
+    if (map.getLayer(LANDMARK_LAYER)) {
+      map.setPaintProperty(LANDMARK_LAYER, 'circle-radius', radius);
+      map.setPaintProperty(LANDMARK_LAYER, 'circle-stroke-opacity', opacity);
+    }
+  }, 40);
+}
+
+function hideLandmarkHighlight(map: import('maplibre-gl').Map): void {
+  if (landmarkPulseTimer !== null) { clearInterval(landmarkPulseTimer); landmarkPulseTimer = null; }
+  if (map.getLayer(LANDMARK_LAYER)) {
+    map.setLayoutProperty(LANDMARK_LAYER, 'visibility', 'none');
+  }
 }
 
 start().catch((err) => {
