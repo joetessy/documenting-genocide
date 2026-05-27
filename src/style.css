@@ -152,11 +152,14 @@ button { font-family: inherit; }
   transition: opacity 350ms ease;
 }
 #loading .loading-title {
-  font-family: var(--sans);
-  font-size: 18px;
-  font-weight: 600;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
   color: var(--ink-1);
   letter-spacing: -0.015em;
+  max-width: 320px;
+  text-align: center;
+  line-height: 1.3;
 }
 #loading .loading-subtitle {
   font-family: var(--sans);
