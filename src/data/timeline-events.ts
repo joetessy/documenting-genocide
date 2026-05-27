@@ -13,6 +13,11 @@ export interface TimelineEvent {
   date: string;          // ISO YYYY-MM-DD
   title: string;         // Short, factual phrasing
   description: string;   // One- to two-sentence factual summary
+  // Optional camera focus for the guided tour. When present, the tour eases
+  // the map to this location at a moderate zoom with a slight pitch. Events
+  // that affected the whole Strip (ceasefires, broad offensives, etc.)
+  // intentionally leave `focus` undefined so the tour keeps the wide view.
+  focus?: { lat: number; lon: number; zoom?: number };
 }
 
 export const TIMELINE_EVENTS: TimelineEvent[] = [
@@ -27,18 +32,21 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     title: 'Al-Ahli Arab Hospital explosion',
     description:
       'A blast in the hospital courtyard killed hundreds of Palestinians sheltering there. The cause remains disputed.',
+    focus: { lat: 31.5053, lon: 34.4614, zoom: 14 },
   },
   {
     date: '2023-10-27',
     title: 'Israeli ground invasion begins',
     description:
       'Israeli forces crossed into northern Gaza; phone and internet services were cut across the Strip.',
+    focus: { lat: 31.55, lon: 34.50, zoom: 12 },
   },
   {
     date: '2023-11-15',
     title: 'Al-Shifa Hospital raid begins',
     description:
       "Israeli forces entered Gaza's largest hospital, alleging an underground Hamas command center beneath the complex.",
+    focus: { lat: 31.5240, lon: 34.4480, zoom: 14 },
   },
   {
     date: '2023-11-24',
@@ -51,36 +59,42 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     title: 'Flour Massacre at Nabulsi roundabout',
     description:
       'At least 118 Palestinians were killed when Israeli troops fired on crowds awaiting an aid convoy in Gaza City.',
+    focus: { lat: 31.5310, lon: 34.4640, zoom: 14 },
   },
   {
     date: '2024-04-01',
     title: 'World Central Kitchen convoy strike',
     description:
       'Three Israeli drone strikes killed seven aid workers from six countries, halting most Gaza aid distribution in the aftermath.',
+    focus: { lat: 31.4180, lon: 34.3560, zoom: 13 },
   },
   {
     date: '2024-05-06',
     title: 'Rafah ground offensive begins',
     description:
       'Israeli forces seized the Rafah border crossing and began operations in a city sheltering over a million displaced people.',
+    focus: { lat: 31.2960, lon: 34.2430, zoom: 13 },
   },
   {
     date: '2024-05-26',
     title: 'Al-Mawasi tent camp strike',
     description:
       'Airstrikes on the designated "humanitarian zone" killed at least 45 displaced Palestinians and ignited a fire through the camp.',
+    focus: { lat: 31.3200, lon: 34.2700, zoom: 14 },
   },
   {
     date: '2024-08-10',
     title: 'Al-Tabaeen school strike',
     description:
       'Airstrikes on a school complex sheltering displaced people killed at least 93 Palestinians during dawn prayer.',
+    focus: { lat: 31.5200, lon: 34.4700, zoom: 14 },
   },
   {
     date: '2024-10-16',
     title: 'Yahya Sinwar killed',
     description:
       'The Hamas leader considered the architect of October 7 was killed by Israeli forces in Rafah.',
+    focus: { lat: 31.3000, lon: 34.2500, zoom: 13 },
   },
   {
     date: '2025-01-19',
