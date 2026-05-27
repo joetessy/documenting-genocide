@@ -46,13 +46,14 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
           <span class="lt-label">Incidents</span>
           <button type="button" class="lt-disclosure" id="incidents-disclosure" aria-label="Toggle incident type filters" aria-expanded="false">▾</button>
         </label>
-        <div class="lt-tier-block" aria-label="Marker size by people killed">
-          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-1"></span><span class="lt-tier-num">&lt;10</span></div>
-          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-2"></span><span class="lt-tier-num">10–49</span></div>
-          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-3"></span><span class="lt-tier-num">50–99</span></div>
-          <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-4"></span><span class="lt-tier-num">100+</span></div>
-        </div>
         <div class="lt-detail" id="incident-cats" hidden>
+          <div class="lt-detail-title">By size (people killed)</div>
+          <div class="lt-tier-block" aria-label="Marker size by people killed">
+            <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-1"></span><span class="lt-tier-num">&lt;10</span></div>
+            <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-2"></span><span class="lt-tier-num">10–49</span></div>
+            <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-3"></span><span class="lt-tier-num">50–99</span></div>
+            <div class="lt-tier-col"><span class="lt-tier-dot lt-tier-dot-4"></span><span class="lt-tier-num">100+</span></div>
+          </div>
           <div class="lt-detail-title">By type</div>
           ${catRows}
         </div>
