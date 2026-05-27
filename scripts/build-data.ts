@@ -1,5 +1,6 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { fetchAirwars } from './fetch-airwars';
 import { fetchUcdp } from './fetch-ucdp';
 import { fetchOcha } from './fetch-ocha';
@@ -257,26 +258,35 @@ async function main(): Promise<void> {
     });
   }
 
+  // Damage features. ~200k points × ~290B each = ~55MB raw JSON, which exceeds
+  // Cloudflare Pages' 25MiB per-asset limit. We trim per-feature bytes (round
+  // coords to ~1m precision, drop the property `id` that duplicates feature.id,
+  // omit single-entry progression that just restates assessment_date) and
+  // serve gzipped — loader.ts decompresses via DecompressionStream.
+  const round5 = (n: number): number => Math.round(n * 1e5) / 1e5;
   const damageFc: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: damageInConflict.map((d) => {
       const extra = rawDamageBySlug.get(d.id);
+      const prog = extra?.progression ?? [];
+      const props: Record<string, unknown> = {
+        status: d.status,
+        assessment_date: d.assessment_date,
+      };
+      if (extra?.governorate) props.governorate = extra.governorate;
+      if (prog.length > 1) props.progression = prog;
       return {
         type: 'Feature',
         id: d.id,
-        geometry: { type: 'Point', coordinates: [d.location.lon, d.location.lat] },
-        properties: {
-          id: d.id,
-          status: d.status,
-          assessment_date: d.assessment_date,
-          governorate: extra?.governorate ?? '',
-          progression: extra?.progression ?? [],
-        },
+        geometry: { type: 'Point', coordinates: [round5(d.location.lon), round5(d.location.lat)] },
+        properties: props,
       };
     }),
   };
-  await writeFile(join(OUT_DIR, 'damage.geojson'), JSON.stringify(damageFc));
-  console.log(`Wrote ${damageInConflict.length} damage records to ${OUT_DIR}/damage.geojson`);
+  const damageJson = JSON.stringify(damageFc);
+  const damageGz = gzipSync(damageJson, { level: 9 });
+  await writeFile(join(OUT_DIR, 'damage.geojson.gz'), damageGz);
+  console.log(`Wrote ${damageInConflict.length} damage records to ${OUT_DIR}/damage.geojson.gz (${(damageGz.length / 1024 / 1024).toFixed(1)}MB gzipped, ${(damageJson.length / 1024 / 1024).toFixed(1)}MB raw)`);
 
   const osmFeatures = await loadOsmFacilityFeatures();
   console.log(`Loaded ${osmFeatures.length} OSM facility features`);

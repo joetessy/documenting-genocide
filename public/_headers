@@ -1,0 +1,7 @@
+# Tell Cloudflare Pages that .gz files in /data are pre-compressed.
+# Without these headers the browser would treat them as opaque binaries.
+# Build script (scripts/build-data.ts) pre-gzips damage.geojson because the
+# raw ~43MB JSON exceeds Pages' 25MiB per-asset limit.
+/data/*.gz
+  Content-Encoding: gzip
+  Content-Type: application/geo+json
