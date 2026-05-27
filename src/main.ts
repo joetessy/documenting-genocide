@@ -152,43 +152,52 @@ async function start(): Promise<void> {
   // Build a quick lookup of damage features by id, so clicks can hydrate the panel.
   const damageById = new Map(damageData.features.map((f) => [f.properties.id, f]));
 
-  map.on('click', 'incidents-circles', (e) => {
-    if (!e.features || e.features.length === 0) return;
-    const id = e.features[0].properties?.id as string | undefined;
-    if (!id) return;
-    const incident = byId.get(id);
-    if (!incident) return;
-    sidePanel.openIncident(incident);
-  });
-
-  map.on('click', 'damage-circles', (e) => {
-    if (!e.features || e.features.length === 0) return;
-    const id = e.features[0].properties?.id as string | undefined;
-    if (!id) return;
-    const damageFeat = damageById.get(id);
-    if (!damageFeat) return;
-    sidePanel.openDamage(damageFeat);
-  });
-
-  map.on('mouseenter', 'damage-circles', () => {
-    map.getCanvas().style.cursor = 'pointer';
-  });
-  map.on('mouseleave', 'damage-circles', () => {
-    map.getCanvas().style.cursor = '';
-  });
-
   const facilityById = new Map(facilities.map((f) => [f.id, f]));
 
-  for (const layerId of ['facilities-health', 'facilities-education']) {
-    map.on('click', layerId, (e) => {
-      if (!e.features || e.features.length === 0) return;
-      const id = e.features[0].properties?.id as string | undefined;
-      if (!id) return;
-      const fac = facilityById.get(id);
-      if (!fac) return;
-      sidePanel.openFacility(fac);
-    });
+  // One click handler that picks the topmost relevant layer at the click
+  // point and routes to the right panel. Layer priority (highest wins):
+  //   1. incidents-circles    — red dots, the most "story-bearing" markers
+  //   2. facilities-health    — cyan dots, named civilian buildings
+  //   3. facilities-education — violet dots, schools/universities
+  //   4. damage-circles       — generic damage layer, lowest priority
+  // This replaces the previous per-layer click handlers, which all fired
+  // for the same click and let the last-registered handler (damage)
+  // overwrite the panel that an earlier one (incidents) had set.
+  const CLICK_LAYER_PRIORITY = [
+    'incidents-circles',
+    'facilities-health',
+    'facilities-education',
+    'damage-circles',
+  ];
 
+  map.on('click', (e) => {
+    const activeLayers = CLICK_LAYER_PRIORITY.filter((l) => map.getLayer(l));
+    const hits = map.queryRenderedFeatures(e.point, { layers: activeLayers });
+    if (hits.length === 0) {
+      sidePanel.close();
+      return;
+    }
+    for (const layerId of CLICK_LAYER_PRIORITY) {
+      const hit = hits.find((h) => h.layer.id === layerId);
+      if (!hit) continue;
+      const id = hit.properties?.id as string | undefined;
+      if (!id) return;
+      if (layerId === 'incidents-circles') {
+        const incident = byId.get(id);
+        if (incident) sidePanel.openIncident(incident);
+      } else if (layerId === 'damage-circles') {
+        const damageFeat = damageById.get(id);
+        if (damageFeat) sidePanel.openDamage(damageFeat);
+      } else if (layerId === 'facilities-health' || layerId === 'facilities-education') {
+        const fac = facilityById.get(id);
+        if (fac) sidePanel.openFacility(fac);
+      }
+      return; // only handle the topmost hit
+    }
+  });
+
+  // Cursor feedback when hovering any clickable layer.
+  for (const layerId of CLICK_LAYER_PRIORITY) {
     map.on('mouseenter', layerId, () => {
       map.getCanvas().style.cursor = 'pointer';
     });
@@ -197,21 +206,30 @@ async function start(): Promise<void> {
     });
   }
 
-  map.on('click', (e) => {
-    const hits = map.queryRenderedFeatures(e.point, {
-      layers: ['incidents-circles', 'damage-circles', 'facilities-health', 'facilities-education']
-        .filter((l) => map.getLayer(l)),
-    });
-    if (hits.length === 0) {
-      sidePanel.close();
-    }
-  });
-
   // Lift labels above data overlays for legibility. Keep incident markers
   // on top so the red dots dominate, and labels read clearly when they
   // overlap dense data clusters.
   function lift(): void {
-    for (const id of ['place-neighbourhood', 'place-city', 'incidents-circles', 'incidents-hovered']) {
+    // Final stack order, top to bottom:
+    //   place-city          (labels foreground)
+    //   place-neighbourhood
+    //   incidents-hovered   (red ring around hovered incident)
+    //   incidents-circles   (red dots)
+    //   facilities-health
+    //   facilities-education
+    //   damage-circles
+    //   ... basemap roads / buildings / water ...
+    // moveLayer(id) without a beforeId puts the layer at the very top, so
+    // calling them in bottom-to-top order yields the stack above.
+    for (const id of [
+      'damage-circles',
+      'facilities-education',
+      'facilities-health',
+      'incidents-circles',
+      'incidents-hovered',
+      'place-neighbourhood',
+      'place-city',
+    ]) {
       if (map.getLayer(id)) map.moveLayer(id);
     }
   }
