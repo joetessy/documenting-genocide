@@ -14,6 +14,7 @@ const ORG_LABEL: Record<SourceOrg, string> = {
   ocha: 'OCHA',
   ucdp: 'UCDP',
   osm: 'OpenStreetMap (HOT)',
+  cir: 'Centre for Information Resilience',
 };
 
 const DAMAGE_CLASS_LABEL: Record<number, DamageStatus> = {
