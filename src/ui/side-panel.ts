@@ -1,5 +1,6 @@
 import type { Incident, CredibilityRating, SourceOrg, DamageStatus, FacilityRecord } from '@shared/types';
 import type { DamageFeature } from '../data/loader';
+import type { TimelineEvent } from '../data/timeline-events';
 
 const RATING_LABELS: Record<CredibilityRating, string> = {
   fair: 'Fair',
@@ -64,6 +65,7 @@ export interface SidePanelHandle {
   openIncident(incident: Incident): void;
   openDamage(feature: DamageFeature): void;
   openFacility(record: FacilityRecord): void;
+  openTimelineEvent(ev: TimelineEvent, indexLabel?: string): void;
   close(): void;
 }
 
@@ -238,10 +240,31 @@ export function mountSidePanel(parent: HTMLElement): SidePanelHandle {
     attachCloseHandler();
   }
 
+  function renderTimelineEvent(ev: TimelineEvent, indexLabel?: string): void {
+    const dateLabel = formatDate(ev.date);
+    const kicker = indexLabel ?? 'Timeline event';
+    el.innerHTML = `
+      <button class="sp-close" aria-label="Close panel">✕</button>
+      <div class="sp-body">
+        <div class="sp-cat">${escapeHtml(kicker)}</div>
+        <h2 class="sp-title">${escapeHtml(ev.title)}</h2>
+        <div class="sp-meta">${dateLabel}</div>
+
+        <div class="sp-desc">
+          <p>${escapeHtml(ev.description)}</p>
+        </div>
+      </div>
+    `;
+    el.classList.add('is-open');
+    el.scrollTop = 0;
+    attachCloseHandler();
+  }
+
   return {
     openIncident: renderIncident,
     openDamage: renderDamage,
     openFacility: renderFacility,
+    openTimelineEvent: renderTimelineEvent,
     close() {
       el.classList.remove('is-open');
     },
