@@ -5,11 +5,17 @@ import { fetchUcdp } from './fetch-ucdp';
 import { fetchOcha } from './fetch-ocha';
 import { fetchOsmFacilities } from './fetch-osm-facilities';
 import { fetchCir } from './fetch-cir';
+import { fetchGeoconfirmed } from './fetch-geoconfirmed';
+import { fetchAwsd } from './fetch-awsd';
+import { fetchWikidata } from './fetch-wikidata';
 import { normalizeAirwarsRecord, type AirwarsTaxonomies, type ArticleData } from './normalize-airwars';
 import { normalizeUcdpRecord } from './normalize-ucdp';
 import { normalizeOchaFeature } from './normalize-ocha';
 import { normalizeOsmFacility } from './normalize-osm-facilities';
 import { normalizeCirFeature } from './normalize-cir';
+import { normalizeGeoconfirmedRecord } from './normalize-geoconfirmed';
+import { normalizeAwsdRow } from './normalize-awsd';
+import { normalizeWikidataEvent } from './normalize-wikidata';
 import { dedupeIncidents } from './dedupe';
 import type { Incident, BuildMeta, DamageRecord, DamageStatus, FacilityRecord } from '../shared/types';
 
@@ -19,6 +25,9 @@ const UCDP_RAW = 'data/raw/ucdp';
 const OCHA_RAW = 'data/raw/ocha';
 const OSM_RAW = 'data/raw/osm';
 const CIR_RAW = 'data/raw/cir';
+const GEOCONFIRMED_RAW = 'data/raw/geoconfirmed';
+const AWSD_RAW = 'data/raw/awsd';
+const WIKIDATA_RAW = 'data/raw/wikidata';
 const OUT_DIR = 'public/data';
 
 async function loadAirwarsPages(): Promise<unknown[]> {
@@ -82,11 +91,29 @@ async function loadCirFeatures(): Promise<GeoJSON.Feature[]> {
   } catch { return []; }
 }
 
+async function loadGeoconfirmedPlacemarks(): Promise<unknown[]> {
+  try { return JSON.parse(await readFile(join(GEOCONFIRMED_RAW, 'incidents.json'), 'utf8')); }
+  catch { return []; }
+}
+
+async function loadAwsdRows(): Promise<Record<string, string>[]> {
+  try { return JSON.parse(await readFile(join(AWSD_RAW, 'incidents.json'), 'utf8')); }
+  catch { return []; }
+}
+
+async function loadWikidataEvents(): Promise<unknown[]> {
+  try { return JSON.parse(await readFile(join(WIKIDATA_RAW, 'incidents.json'), 'utf8')); }
+  catch { return []; }
+}
+
 async function main(): Promise<void> {
   await fetchAirwars();
   await fetchUcdp();
   await fetchOcha();
   await fetchCir();
+  await fetchGeoconfirmed();
+  await fetchAwsd();
+  await fetchWikidata();
   await fetchOsmFacilities();
 
   const airwarsRaws = await loadAirwarsPages();
@@ -121,11 +148,51 @@ async function main(): Promise<void> {
   }
   console.log(`Normalized ${cirIncidents.length} CIR incidents (${cirUnplotted} dropped)`);
 
-  console.log(`Normalized ${airwarsIncidents.length} Airwars + ${ucdpIncidents.length} UCDP + ${cirIncidents.length} CIR incidents`);
-  console.log(`  Unplotted: ${airwarsUnplotted} Airwars, ${ucdpUnplotted} UCDP, ${cirUnplotted} CIR`);
+  const geoconfirmedRaws = await loadGeoconfirmedPlacemarks();
+  console.log(`Loaded ${geoconfirmedRaws.length} Geoconfirmed raw placemarks`);
+  const geoconfirmedIncidents: Incident[] = [];
+  let geoconfirmedUnplotted = 0;
+  for (const p of geoconfirmedRaws) {
+    const inc = normalizeGeoconfirmedRecord(p as never);
+    if (inc) geoconfirmedIncidents.push(inc);
+    else geoconfirmedUnplotted++;
+  }
+  console.log(`Normalized ${geoconfirmedIncidents.length} Geoconfirmed incidents (${geoconfirmedUnplotted} dropped)`);
 
-  const { incidents: dedupedIncidents, merges } = dedupeIncidents([...airwarsIncidents, ...ucdpIncidents, ...cirIncidents]);
-  console.log(`Dedup: ${airwarsIncidents.length + ucdpIncidents.length} → ${dedupedIncidents.length} (${merges} merges)`);
+  const awsdRaws = await loadAwsdRows();
+  console.log(`Loaded ${awsdRaws.length} AWSD raw rows`);
+  const awsdIncidents: Incident[] = [];
+  let awsdUnplotted = 0;
+  for (const row of awsdRaws) {
+    const inc = normalizeAwsdRow(row);
+    if (inc) awsdIncidents.push(inc);
+    else awsdUnplotted++;
+  }
+  console.log(`Normalized ${awsdIncidents.length} AWSD incidents (${awsdUnplotted} dropped)`);
+
+  const wikidataRaws = await loadWikidataEvents();
+  console.log(`Loaded ${wikidataRaws.length} Wikidata raw events`);
+  const wikidataIncidents: Incident[] = [];
+  let wikidataUnplotted = 0;
+  for (const e of wikidataRaws) {
+    const inc = normalizeWikidataEvent(e as never);
+    if (inc) wikidataIncidents.push(inc);
+    else wikidataUnplotted++;
+  }
+  console.log(`Normalized ${wikidataIncidents.length} Wikidata incidents (${wikidataUnplotted} dropped)`);
+
+  console.log(`Normalized ${airwarsIncidents.length} Airwars + ${ucdpIncidents.length} UCDP + ${cirIncidents.length} CIR + ${geoconfirmedIncidents.length} Geoconfirmed + ${awsdIncidents.length} AWSD + ${wikidataIncidents.length} Wikidata incidents`);
+  console.log(`  Unplotted: ${airwarsUnplotted} Airwars, ${ucdpUnplotted} UCDP, ${cirUnplotted} CIR, ${geoconfirmedUnplotted} Geoconfirmed, ${awsdUnplotted} AWSD, ${wikidataUnplotted} Wikidata`);
+
+  const { incidents: dedupedIncidents, merges } = dedupeIncidents([
+    ...airwarsIncidents,
+    ...ucdpIncidents,
+    ...cirIncidents,
+    ...geoconfirmedIncidents,
+    ...awsdIncidents,
+    ...wikidataIncidents,
+  ]);
+  console.log(`Dedup: ${airwarsIncidents.length + ucdpIncidents.length + cirIncidents.length + geoconfirmedIncidents.length + awsdIncidents.length + wikidataIncidents.length} → ${dedupedIncidents.length} (${merges} merges)`);
 
   // Clip to the start of the war. Pre-Oct-7-2023 records are pre-war and
   // shouldn't appear in the exhibit's timeline. Keeps the bundle smaller too.
@@ -223,10 +290,13 @@ async function main(): Promise<void> {
       airwars: airwarsIncidents.length,
       ucdp: ucdpIncidents.length,
       cir: cirIncidents.length,
+      geoconfirmed: geoconfirmedIncidents.length,
+      awsd: awsdIncidents.length,
+      wikidata: wikidataIncidents.length,
       osm: facilities.length,
     },
     dedup_merges: merges,
-    unplotted_count: airwarsUnplotted + ucdpUnplotted + cirUnplotted,
+    unplotted_count: airwarsUnplotted + ucdpUnplotted + cirUnplotted + geoconfirmedUnplotted + awsdUnplotted + wikidataUnplotted,
     damage_count: damageInConflict.length,
     facility_count: facilities.length,
   };
