@@ -43,20 +43,25 @@ async function start(): Promise<void> {
   aboutBtn.addEventListener('click', () => aboutModal.open());
   app.appendChild(aboutBtn);
 
-  loading.setStatus('Loading incident data…');
-  const { incidents, meta } = await loadIncidents();
+  loading.setStatus('Loading data…');
+  // Kick off all four fetches in parallel. They were previously sequential
+  // awaits which added up the network/parse times; running them concurrently
+  // bounds total time to the slowest one (the damage .gz, which also needs
+  // client-side decompression).
+  const [
+    { incidents, meta },
+    damageData,
+    casualtyToll,
+    facilities,
+  ] = await Promise.all([
+    loadIncidents(),
+    loadDamage(),
+    loadCasualtyToll(),
+    loadFacilities(),
+  ]);
   console.log(`Loaded ${incidents.length} incidents (${meta.unplotted_count} unplotted), build ${meta.build_date}`);
-
-  loading.setStatus('Loading damage assessment…');
-  const damageData = await loadDamage();
   console.log(`Loaded ${damageData.features.length} damage features`);
-
-  loading.setStatus('Loading casualty figures…');
-  const casualtyToll = await loadCasualtyToll();
   console.log(`Loaded ${casualtyToll.length} daily casualty data points`);
-
-  loading.setStatus('Loading facilities…');
-  const facilities = await loadFacilities();
   console.log(`Loaded ${facilities.length} facilities`);
 
   const header = mountHeader(app, {
@@ -149,25 +154,14 @@ async function start(): Promise<void> {
     }
   }
 
-  // Damage layer has 196K features — each setFilter call costs 50-300ms.
-  // During a fast drag the layer can't keep up. Debounce so it updates
-  // 120ms after the user pauses, leaving markers + header + URL hash
-  // fully responsive in the meantime. Tour mode (5500ms per event) and
-  // auto-play (333ms per tick) both clear this comfortably.
-  let damageUpdateTimer: ReturnType<typeof setTimeout> | undefined;
-  let pendingDamageDate: string | null = null;
-  function scheduleDamageUpdate(date: string): void {
-    pendingDamageDate = date;
-    if (damageUpdateTimer) clearTimeout(damageUpdateTimer);
-    damageUpdateTimer = setTimeout(() => {
-      if (pendingDamageDate) damage.setVisibleDate(pendingDamageDate);
-      damageUpdateTimer = undefined;
-    }, 120);
-  }
+  // Damage updates were previously debounced because each setFilter on 196K
+  // features cost 50-300ms. The layer is now split into one layer per
+  // assessment date (18 total), so scrubbing just toggles visibility on
+  // pre-built layers and runs in microseconds — no debounce needed.
 
   timeCtrl.onChange((date) => {
     markers.setVisibleDate(date);
-    scheduleDamageUpdate(date);
+    damage.setVisibleDate(date);
     timelineEventLayer.setVisibleDate(date);
     header.updateForDate(date);
     scheduleHashUpdate(date);
@@ -344,21 +338,21 @@ async function start(): Promise<void> {
 
   // One click handler that picks the topmost relevant layer at the click
   // point and routes to the right panel. Layer priority (highest wins):
-  //   1. timeline-event-circles — curated major-event markers (white/red rings)
+  //   1. timeline-event-circles — curated major-event markers
   //   2. incidents-circles      — red dots, the most "story-bearing" markers
   //   3. facilities-health      — cyan dots, named civilian buildings
   //   4. facilities-education   — violet dots, schools/universities
-  //   5. damage-circles         — generic damage layer, lowest priority
-  // This replaces the previous per-layer click handlers, which all fired
-  // for the same click and let the last-registered handler (damage)
-  // overwrite the panel that an earlier one (incidents) had set.
+  //   5. damage-<date>          — per-assessment-date damage layers (lowest)
+  // The damage layer is split into one layer per assessment date (so
+  // scrubbing is cheap); they all share the lowest click priority.
   const CLICK_LAYER_PRIORITY = [
     'timeline-event-circles',
     'incidents-circles',
     'facilities-health',
     'facilities-education',
-    'damage-circles',
+    ...damage.layerIds,
   ];
+  const isDamageLayer = (id: string): boolean => id.startsWith('damage-');
 
   map.on('click', (e) => {
     const activeLayers = CLICK_LAYER_PRIORITY.filter((l) => map.getLayer(l));
@@ -399,7 +393,7 @@ async function start(): Promise<void> {
           sidePanel.openIncident(incident);
           setHashIncident(incident.id);
         }
-      } else if (layerId === 'damage-circles') {
+      } else if (isDamageLayer(layerId)) {
         const damageFeat = damageById.get(id);
         if (damageFeat) {
           sidePanel.openDamage(damageFeat);
@@ -433,17 +427,17 @@ async function start(): Promise<void> {
     // Final stack order, top to bottom:
     //   place-city                  (labels foreground)
     //   place-neighbourhood
-    //   timeline-event-circles      (white/red ring "target" markers — always findable)
+    //   timeline-event-circles      (red dots — curated major events)
     //   incidents-hovered           (red ring around hovered incident)
     //   incidents-circles           (red dots)
     //   facilities-health
     //   facilities-education
-    //   damage-circles
+    //   damage-<date> × N           (per-assessment-date damage layers)
     //   ... basemap roads / buildings / water ...
     // moveLayer(id) without a beforeId puts the layer at the very top, so
     // calling them in bottom-to-top order yields the stack above.
     for (const id of [
-      'damage-circles',
+      ...damage.layerIds,
       'facilities-education',
       'facilities-health',
       'incidents-circles',
