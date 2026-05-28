@@ -21,6 +21,7 @@ export interface DamageFeature {
   id: string;
   geometry: { type: 'Point'; coordinates: [number, number] };
   properties: {
+    id?: string;          // copied from the top-level id at load time (see loadDamage)
     status: string;
     assessment_date: string;
     governorate?: string;
@@ -60,7 +61,16 @@ export async function loadDamage(): Promise<DamageData> {
   const text = isGzipped
     ? await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()
     : new TextDecoder().decode(buf);
-  return JSON.parse(text) as DamageData;
+  const fc = JSON.parse(text) as DamageData;
+  // Each feature's id lives at the top level (the build pipeline drops the
+  // redundant properties.id to shave bytes). MapLibre does not expose a
+  // string top-level id through queryRenderedFeatures, so click hit-testing
+  // can't recover it. Copy it into properties here so clicks can look the
+  // feature up in damageById. Kept out of the wire format to stay small.
+  for (const f of fc.features) {
+    f.properties.id = f.id;
+  }
+  return fc;
 }
 
 export async function loadFacilities(): Promise<FacilityRecord[]> {
