@@ -62,6 +62,16 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     ],
   },
   {
+    date: '2023-10-31',
+    title: 'Jabalia refugee camp airstrikes',
+    description:
+      'Large Israeli airstrikes struck the densely populated Jabalia refugee camp over two days, flattening apartment blocks and leaving deep craters. Scores of Palestinians were reported killed.',
+    focus: { lat: 31.5300, lon: 34.4900, zoom: 15, pitch: 45, bearing: -15 },
+    sources: [
+      { name: 'Wikipedia — Jabalia refugee camp airstrikes', url: 'https://en.wikipedia.org/wiki/Jabalia_refugee_camp_airstrikes' },
+    ],
+  },
+  {
     date: '2023-11-15',
     title: 'Al-Shifa Hospital raid begins',
     description:
@@ -76,6 +86,15 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     title: 'First humanitarian pause begins',
     description:
       'A Qatar- and Egypt-mediated week-long truce saw 105 hostages and 240 Palestinian prisoners released, with limited aid entering Gaza.',
+  },
+  {
+    date: '2024-01-26',
+    title: 'ICJ orders Israel to prevent genocide',
+    description:
+      'In the case brought by South Africa, the International Court of Justice found a plausible risk of genocide in Gaza and ordered Israel to take measures to prevent genocidal acts.',
+    sources: [
+      { name: 'Wikipedia — South Africa v. Israel (Genocide Convention)', url: 'https://en.wikipedia.org/wiki/South_Africa_v._Israel_(Genocide_Convention)' },
+    ],
   },
   {
     date: '2024-01-29',
@@ -163,6 +182,25 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     casualties: { killed: 1 },
     sources: [
       { name: 'Wikipedia — Killing of Yahya Sinwar', url: 'https://en.wikipedia.org/wiki/Killing_of_Yahya_Sinwar' },
+    ],
+  },
+  {
+    date: '2024-11-21',
+    title: 'ICC arrest warrants for Netanyahu and Gallant',
+    description:
+      "The International Criminal Court issued arrest warrants for Israel's prime minister Netanyahu and former defence minister Gallant over alleged war crimes and crimes against humanity in Gaza.",
+    sources: [
+      { name: 'Wikipedia — ICC arrest warrants for Israeli leaders', url: 'https://en.wikipedia.org/wiki/International_Criminal_Court_arrest_warrants_for_Israeli_leaders' },
+    ],
+  },
+  {
+    date: '2024-12-27',
+    title: 'Kamal Adwan Hospital raided and shut down',
+    description:
+      'Israeli forces raided Kamal Adwan, the last major hospital still functioning in north Gaza, detaining its director Dr. Hussam Abu Safiya and forcing the facility out of service.',
+    focus: { lat: 31.5400, lon: 34.5050, zoom: 16, pitch: 48, bearing: 10 },
+    sources: [
+      { name: 'Wikipedia — Kamal Adwan Hospital', url: 'https://en.wikipedia.org/wiki/Kamal_Adwan_Hospital' },
     ],
   },
   {
