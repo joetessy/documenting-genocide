@@ -490,25 +490,22 @@ function mountTourNarrator(
   el.id = 'tour-card';
   parent.appendChild(el);
 
-  // The card is pegged to the focused landmark: we project the event's
-  // lon/lat to screen coordinates and place the card beside it, re-running
-  // on every camera move so it tracks the point through the fly-to. Cached
-  // card dimensions avoid forcing layout on each move frame.
+  // The card is pegged to the focused landmark, but it does NOT track the
+  // point frame-by-frame during the fly-to — that looked choppy and made the
+  // card skate across the screen. Instead it fades out while the camera is
+  // moving and re-renders (positioned at the now-stationary landmark) once
+  // motion settles. Cached card dimensions avoid forcing layout on resize.
+  let currentEv: TimelineEvent | null = null;
   let focus: { lat: number; lon: number } | null = null;
   let cardW = 0;
   let cardH = 0;
+  let settleTimer: ReturnType<typeof setTimeout> | null = null;
   const MARGIN = 20;
   const GAP = 28;   // distance from the point to the card edge
 
   const isMobile = (): boolean => window.matchMedia('(max-width: 640px)').matches;
 
-  function measure(): void {
-    cardW = el.offsetWidth;
-    cardH = el.offsetHeight;
-  }
-
-  function reposition(): void {
-    if (!el.classList.contains('is-open')) return;
+  function position(): void {
     // On phones the card is pinned full-width to the bottom by CSS; don't
     // fight it with inline positioning.
     if (isMobile()) {
@@ -538,22 +535,47 @@ function mountTourNarrator(
     el.style.top = `${Math.round(top)}px`;
   }
 
-  map.on('move', reposition);
-  window.addEventListener('resize', () => { measure(); reposition(); });
+  // Render the current event's content, position it at the settled landmark,
+  // and fade in. Called once the camera stops (moveend) — never mid-flight.
+  function reveal(): void {
+    if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
+    if (!currentEv) return;
+    focus = currentEv.focus ? { lat: currentEv.focus.lat, lon: currentEv.focus.lon } : null;
+    el.innerHTML = `
+      <div class="tc-date">${currentEv.date}</div>
+      <h3 class="tc-title">${escapeHtml(currentEv.title)}</h3>
+      <p class="tc-desc">${escapeHtml(currentEv.description)}</p>
+    `;
+    cardW = el.offsetWidth;
+    cardH = el.offsetHeight;
+    position();
+    el.classList.add('is-open');
+  }
+
+  // Fade out whenever the camera starts moving; reveal again when it rests.
+  map.on('movestart', () => { if (currentEv) el.classList.remove('is-open'); });
+  map.on('moveend', () => { if (currentEv) reveal(); });
+  window.addEventListener('resize', () => {
+    if (currentEv && el.classList.contains('is-open')) {
+      cardW = el.offsetWidth;
+      cardH = el.offsetHeight;
+      position();
+    }
+  });
 
   return {
     show(ev) {
-      focus = ev.focus ? { lat: ev.focus.lat, lon: ev.focus.lon } : null;
-      el.innerHTML = `
-        <div class="tc-date">${ev.date}</div>
-        <h3 class="tc-title">${escapeHtml(ev.title)}</h3>
-        <p class="tc-desc">${escapeHtml(ev.description)}</p>
-      `;
-      el.classList.add('is-open');
-      measure();
-      reposition();
+      currentEv = ev;
+      // Fade out now; the camera fly-to that the tour kicks off alongside this
+      // call will end in a moveend that reveals the new card. A fallback timer
+      // covers the rare case where the camera doesn't actually move.
+      el.classList.remove('is-open');
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(reveal, 2200);
     },
     hide() {
+      currentEv = null;
+      if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
       el.classList.remove('is-open');
     },
   };
