@@ -7,11 +7,15 @@ export interface OnboardingHandle {
 }
 
 export function mountOnboarding(parent: HTMLElement): OnboardingHandle {
-  // If localStorage already has the dismissal flag, do nothing — return a no-op handle.
-  // Otherwise, append the overlay DOM.
+  // Show once per session: the dismissal flag lives in sessionStorage, so a
+  // fresh visit (new tab / new session) sees the intro again, but refreshes
+  // and in-session navigation don't re-nag. (A prior version used localStorage,
+  // which suppressed it forever; clear that stale key so returning visitors
+  // get the once-per-session behavior.)
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
 
   const dismissed = (() => {
-    try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
+    try { return sessionStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
   })();
 
   const backdrop = document.createElement('div');
@@ -47,7 +51,7 @@ export function mountOnboarding(parent: HTMLElement): OnboardingHandle {
   function close(): void {
     backdrop.classList.remove('is-open');
     card.classList.remove('is-open');
-    try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* no localStorage available, just close */ }
+    try { sessionStorage.setItem(STORAGE_KEY, '1'); } catch { /* no sessionStorage available, just close */ }
   }
 
   function open(): void {
