@@ -286,7 +286,7 @@ async function start(): Promise<void> {
     },
     perEventMs: 7500,
     onStateChange(isPlaying) {
-      tourLabel.textContent = isPlaying ? 'Stop the tour' : 'Take the tour';
+      tourLabel.textContent = isPlaying ? 'Stop' : 'Guided path';
       tourGlyph.innerHTML = isPlaying ? TOUR_GLYPH_STOP : TOUR_GLYPH_PLAY;
       tourBtn.classList.toggle('is-playing', isPlaying);
     },
@@ -303,9 +303,9 @@ async function start(): Promise<void> {
   tourGlyph.innerHTML = TOUR_GLYPH_PLAY;
   const tourLabel = document.createElement('span');
   tourLabel.className = 'tour-label';
-  tourLabel.textContent = 'Take the tour';
+  tourLabel.textContent = 'Guided path';
   tourBtn.append(tourGlyph, tourLabel);
-  tourBtn.setAttribute('aria-label', 'Start the guided tour of major events');
+  tourBtn.setAttribute('aria-label', 'Start the guided path through major events');
   tourBtn.addEventListener('click', () => {
     clearTimelineFocus({ resetCamera: false });  // tour will set its own camera
     tour.toggle();

@@ -33,7 +33,7 @@ export function mountOnboarding(parent: HTMLElement): OnboardingHandle {
     <ul class="onboarding-tips">
       <li><strong>Press play</strong> to watch the war unfold day by day, or scrub the timeline manually.</li>
       <li><strong>Click any dot</strong> to open the incident detail with verifiable sources.</li>
-      <li><strong>Click "Tour"</strong> on the scrubber for a guided walkthrough of major events.</li>
+      <li><strong>Click "Guided path"</strong> on the scrubber for a guided walkthrough of major events.</li>
       <li><strong>Hover the red ticks</strong> on the timeline for major-moment context (Al-Ahli, Flour Massacre, etc.).</li>
     </ul>
     <button class="onboarding-dismiss" type="button">Start exploring</button>
