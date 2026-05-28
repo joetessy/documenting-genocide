@@ -251,7 +251,7 @@ async function start(): Promise<void> {
   // mode. Replaces the side panel as the per-stop info surface so the user has
   // a single, predictable place to read each event without the map getting
   // obscured.
-  const narrator = mountTourNarrator(app);
+  const narrator = mountTourNarrator(app, map);
 
   // Tour controller — auto-advances through the 14 timeline events with a
   // pulsing landmark ring + bottom-right narrator card at each. Click to
@@ -482,18 +482,76 @@ async function start(): Promise<void> {
 // the per-stop info surface — single predictable location with date, title,
 // and one- to two-sentence description in the user's peripheral vision while
 // the map carries the spatial story.
-function mountTourNarrator(parent: HTMLElement): { show(ev: TimelineEvent): void; hide(): void } {
+function mountTourNarrator(
+  parent: HTMLElement,
+  map: maplibregl.Map,
+): { show(ev: TimelineEvent): void; hide(): void } {
   const el = document.createElement('div');
   el.id = 'tour-card';
   parent.appendChild(el);
+
+  // The card is pegged to the focused landmark: we project the event's
+  // lon/lat to screen coordinates and place the card beside it, re-running
+  // on every camera move so it tracks the point through the fly-to. Cached
+  // card dimensions avoid forcing layout on each move frame.
+  let focus: { lat: number; lon: number } | null = null;
+  let cardW = 0;
+  let cardH = 0;
+  const MARGIN = 20;
+  const GAP = 28;   // distance from the point to the card edge
+
+  const isMobile = (): boolean => window.matchMedia('(max-width: 640px)').matches;
+
+  function measure(): void {
+    cardW = el.offsetWidth;
+    cardH = el.offsetHeight;
+  }
+
+  function reposition(): void {
+    if (!el.classList.contains('is-open')) return;
+    // On phones the card is pinned full-width to the bottom by CSS; don't
+    // fight it with inline positioning.
+    if (isMobile()) {
+      el.classList.remove('is-pegged');
+      el.style.left = '';
+      el.style.top = '';
+      return;
+    }
+    el.classList.add('is-pegged');
+    let left: number;
+    let top: number;
+    if (focus) {
+      const p = map.project([focus.lon, focus.lat]);
+      // Prefer the right of the landmark; flip left if it would overflow.
+      left = p.x + GAP;
+      if (left + cardW > window.innerWidth - MARGIN) left = p.x - GAP - cardW;
+      top = p.y - cardH / 2;
+    } else {
+      // Events with no specific location (ceasefires, anniversaries) — the
+      // camera pulls back to the whole Strip, so center the card near the bottom.
+      left = (window.innerWidth - cardW) / 2;
+      top = window.innerHeight - cardH - 40;
+    }
+    left = Math.max(MARGIN, Math.min(left, window.innerWidth - cardW - MARGIN));
+    top = Math.max(MARGIN, Math.min(top, window.innerHeight - cardH - MARGIN));
+    el.style.left = `${Math.round(left)}px`;
+    el.style.top = `${Math.round(top)}px`;
+  }
+
+  map.on('move', reposition);
+  window.addEventListener('resize', () => { measure(); reposition(); });
+
   return {
     show(ev) {
+      focus = ev.focus ? { lat: ev.focus.lat, lon: ev.focus.lon } : null;
       el.innerHTML = `
         <div class="tc-date">${ev.date}</div>
         <h3 class="tc-title">${escapeHtml(ev.title)}</h3>
         <p class="tc-desc">${escapeHtml(ev.description)}</p>
       `;
       el.classList.add('is-open');
+      measure();
+      reposition();
     },
     hide() {
       el.classList.remove('is-open');

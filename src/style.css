@@ -1276,11 +1276,13 @@ button { font-family: inherit; }
   bottom: 96px;
   right: 22px;
   z-index: 14;
-  width: min(380px, calc(100vw - 44px));
+  /* Proportional to the viewport so it reads at the right scale on large
+     monitors instead of shrinking into a small corner card. */
+  width: clamp(340px, 27vw, 560px);
   background: rgba(20, 18, 12, 0.94);
   color: #ffffff;
-  border-radius: 10px;
-  padding: 22px 26px 24px;
+  border-radius: 12px;
+  padding: clamp(20px, 1.6vw, 30px) clamp(24px, 1.9vw, 36px);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36), 0 2px 6px rgba(0, 0, 0, 0.18);
   opacity: 0;
   pointer-events: none;
@@ -1292,8 +1294,14 @@ button { font-family: inherit; }
   opacity: 1;
   transform: translateY(0);
 }
+/* When pegged to a landmark, JS drives left/top — clear the default
+   bottom-right anchor so the inline coordinates take effect. */
+#tour-card.is-pegged {
+  right: auto;
+  bottom: auto;
+}
 #tour-card .tc-date {
-  font-size: 10.5px;
+  font-size: clamp(10.5px, 0.78vw, 13px);
   font-weight: 600;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -1302,14 +1310,14 @@ button { font-family: inherit; }
 }
 #tour-card .tc-title {
   font-family: var(--serif);
-  font-size: 22px;
+  font-size: clamp(22px, 1.7vw, 32px);
   font-weight: 500;
   letter-spacing: -0.015em;
-  line-height: 1.25;
+  line-height: 1.22;
   margin: 0 0 10px;
 }
 #tour-card .tc-desc {
-  font-size: 14px;
+  font-size: clamp(14px, 1.05vw, 18px);
   line-height: 1.55;
   opacity: 0.9;
   margin: 0;
