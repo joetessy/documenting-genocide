@@ -30,11 +30,13 @@ export function mountOnboarding(parent: HTMLElement): OnboardingHandle {
       across the Gaza Strip since October 7, 2023. Every marker is sourced from open public datasets — Airwars, UCDP,
       OCHA UNOSAT, Centre for Information Resilience, Geoconfirmed, Aid Worker Security Database, and Wikidata.
     </p>
+    <div class="onboarding-howto">Ways to explore</div>
     <ul class="onboarding-tips">
-      <li><strong>Press play</strong> to watch the war unfold day by day, or scrub the timeline manually.</li>
-      <li><strong>Click any dot</strong> to open the incident detail with verifiable sources.</li>
-      <li><strong>Click "Guided path"</strong> on the scrubber for a guided walkthrough of major events.</li>
-      <li><strong>Hover the red ticks</strong> on the timeline for major-moment context (Al-Ahli, Flour Massacre, etc.).</li>
+      <li><strong>Take the guided path</strong> — click <em>Guided path</em> (bottom-left) for a narrated fly-through of the major events.</li>
+      <li><strong>Watch it day by day</strong> — press <em>play</em> on the timeline to let the genocide unfold chronologically.</li>
+      <li><strong>Scrub manually</strong> — drag the timeline to jump to any date yourself.</li>
+      <li><strong>Zoom &amp; pan</strong> — scroll to zoom, drag to move, Ctrl-drag to tilt; explore any neighborhood up close.</li>
+      <li><strong>Click any marker</strong> — open a detail panel with sourced figures (hover the red timeline ticks for major-moment context).</li>
     </ul>
     <button class="onboarding-dismiss" type="button">Start exploring</button>
   `;

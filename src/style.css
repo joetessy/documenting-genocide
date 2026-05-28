@@ -1231,6 +1231,18 @@ button { font-family: inherit; }
   font-weight: 600;
 }
 
+#onboarding-card .onboarding-howto {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--hairline);
+}
+
 #onboarding-card .onboarding-tips {
   font-family: var(--sans);
   font-size: 13px;
@@ -1238,6 +1250,12 @@ button { font-family: inherit; }
   color: var(--ink-2);
   padding-left: 18px;
   margin: 0 0 22px;
+}
+
+#onboarding-card .onboarding-tips em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink-1);
 }
 
 #onboarding-card .onboarding-tips li {
