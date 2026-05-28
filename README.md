@@ -1,12 +1,12 @@
-# The Gaza Exhibit
+# Documenting Genocide
 
-An interactive web map + timeline that documents the war on Gaza since October 7, 2023.
+An interactive web map + timeline that documents the Genocide on Gaza since October 7, 2023.
 
-Visitors pan, zoom, and tilt across the Gaza Strip; scrub a timeline that drives both per-incident markers and a 196,000-feature damaged-buildings layer; click any feature for a sourced per-record report; and take a guided tour through the war's major turning points.
+Visitors pan, zoom, and tilt across the Gaza Strip; scrub a timeline that drives both per-incident markers and a 196,000-feature damaged-buildings layer; click any feature for a sourced per-record report; and take a guided tour through the Genocide's major turning points.
 
-This exhibit is single-developer, non-commercial, educational, and ad-free. Every claim on the map is backed by a public, citable source.
+This project is single-developer, non-commercial, educational, and ad-free. Every claim on the map is backed by a public, citable source.
 
-> **Audience.** The general public, journalists, researchers, and advocates. The exhibit is both a memorial and a documentary record.
+> **Audience.** The general public, journalists, researchers, and advocates. The project is both a memorial and a documentary record.
 
 ---
 
@@ -70,7 +70,7 @@ The basemap is a custom pen-and-ink style ([`src/map/style.ts`](src/map/style.ts
 ## Project structure
 
 ```
-gaza-exhibit/
+documenting-genocide/
 ├── data/raw/                            ~100 MB of committed source snapshots
 │   ├── airwars/                         ~28 pages + ~2,709 article HTML files
 │   ├── ucdp/                            gaza-events.json
@@ -262,7 +262,7 @@ In rough priority order:
 
 ## Acknowledgments
 
-This exhibit only exists because of the journalists, researchers, and human-rights workers who put themselves at risk to document this war. Particular thanks to:
+This project only exists because of the journalists, researchers, and human-rights workers who put themselves at risk to document this genocide. Particular thanks to:
 
 - **Airwars** for the incident catalogue and narratives.
 - **Hannah and the CIR team** for granting us permission to use the Israel-Gaza Conflict Map data.

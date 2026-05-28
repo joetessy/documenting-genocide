@@ -7,7 +7,7 @@ export function mountLoading(parent: HTMLElement): LoadingHandle {
   const el = document.createElement('div');
   el.id = 'loading';
   el.innerHTML = `
-    <div class="loading-title">A geographic record of the Genocide on Gaza</div>
+    <div class="loading-title">A geographic record documenting the Genocide on Gaza</div>
     <div class="loading-subtitle" id="loading-status">Loading…</div>
     <div class="loading-bar" aria-hidden="true"></div>
   `;

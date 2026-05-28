@@ -125,7 +125,7 @@ export function mountAboutModal(parent: HTMLElement): AboutModalHandle {
 
       <section class="about-section">
         <p>
-          This is an interactive geographic record of the Genocide on Gaza since October 7, 2023. Every marker on
+          This is an interactive geographic record documenting the Genocide on Gaza since October 7, 2023. Every marker on
           the map is backed by a verifiable source. The map is independent, non-commercial, and educational.
         </p>
         <p>
