@@ -601,7 +601,7 @@ button { font-family: inherit; }
    ─────────────────────────────────────────────────────────────────────────── */
 #layer-toggle {
   position: absolute;
-  top: 152px;          /* clears the shorter header (no subtitle) + 17px gap */
+  top: 168px;          /* clears the header + a comfortable gap below it */
   left: 22px;
   background: var(--surface);
   border: 1px solid var(--hairline);
@@ -1392,7 +1392,7 @@ button { font-family: inherit; }
      hidden (touch users don't need pan/zoom/Ctrl+drag instructions). JS adds
      `.is-collapsed` at mount on mobile so the panel starts as a single chip. */
   #layer-toggle {
-    top: 96px;
+    top: 110px;
     left: 10px;
     right: auto;
     width: auto;
