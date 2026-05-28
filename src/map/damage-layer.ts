@@ -1,4 +1,5 @@
 import type { Map } from 'maplibre-gl';
+import { registerDamagePmtiles } from './map';
 
 const SOURCE_ID = 'damage';
 const SOURCE_LAYER = 'damage';   // tippecanoe layer name (-l damage)
@@ -35,12 +36,16 @@ export async function mountDamageLayer(map: Map): Promise<DamageLayerHandle> {
     map.setFilter(LAYER_ID, buildFilter(pendingDate));
   }
 
-  const addLayer = (): void => {
+  const addLayer = async (): Promise<void> => {
+    // Downloads the archive into memory + registers it; resolves to the
+    // in-memory source URL (pmtiles://damage). Awaited here so the source is
+    // only added once the archive is ready. Doesn't block mountDamageLayer's
+    // return, so the rest of the UI mounts while the archive downloads.
+    const sourceUrl = await registerDamagePmtiles();
+    if (map.getSource(SOURCE_ID)) return;
     map.addSource(SOURCE_ID, {
       type: 'vector',
-      // Absolute URL so the pmtiles protocol resolves the archive regardless
-      // of the current path. Served as a static asset from the site root.
-      url: `pmtiles://${location.origin}/damage.pmtiles`,
+      url: sourceUrl,
     });
     map.addLayer(
       {
@@ -85,7 +90,7 @@ export async function mountDamageLayer(map: Map): Promise<DamageLayerHandle> {
     if (added || !map.isStyleLoaded()) return;
     added = true;
     map.off('idle', tryAdd);
-    addLayer();
+    void addLayer();
   };
   if (map.isStyleLoaded()) tryAdd();
   else map.on('idle', tryAdd);

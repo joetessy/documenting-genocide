@@ -1,13 +1,43 @@
 import maplibregl, { Map, NavigationControl } from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
+import { Protocol, PMTiles, type Source, type RangeResponse } from 'pmtiles';
 import { gazaStyle } from './style';
 import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
 
-// Register the pmtiles:// protocol once so the damage vector source can read
-// the single-file PMTiles archive via HTTP range requests (only the visible
-// tiles are fetched, instead of the whole 43MB GeoJSON up front).
+// Register the pmtiles:// protocol so the damage vector source can read tiles
+// out of the single-file PMTiles archive.
 const pmtilesProtocol = new Protocol();
 maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
+
+// Cloudflare's static-asset serving does NOT honor HTTP Range requests, which
+// the default pmtiles URL source needs to fetch individual tile byte-ranges.
+// So we download the whole archive once and serve byte-ranges out of that
+// in-memory buffer — no Range requests, works on any static host. The archive
+// is small enough (~14MB) that this is fine; tiles are still decoded lazily.
+class MemorySource implements Source {
+  constructor(private readonly key: string, private readonly buf: ArrayBuffer) {}
+  getKey(): string { return this.key; }
+  async getBytes(offset: number, length: number): Promise<RangeResponse> {
+    return { data: this.buf.slice(offset, offset + length) };
+  }
+}
+
+const PMTILES_KEY = 'damage';
+let damageRegistration: Promise<string> | null = null;
+
+// Download damage.pmtiles once, register it with the protocol, and resolve to
+// the source URL the vector source should use (`pmtiles://damage`). Idempotent.
+export function registerDamagePmtiles(): Promise<string> {
+  if (!damageRegistration) {
+    damageRegistration = (async () => {
+      const res = await fetch('/damage.pmtiles');
+      if (!res.ok) throw new Error(`Failed to load damage.pmtiles: ${res.status}`);
+      const buf = await res.arrayBuffer();
+      pmtilesProtocol.add(new PMTiles(new MemorySource(PMTILES_KEY, buf)));
+      return `pmtiles://${PMTILES_KEY}`;
+    })();
+  }
+  return damageRegistration;
+}
 
 // Tighter navigation bounds. The cream wall+mask combination hides everything
 // outside Gaza, but we also keep the camera centered so the user can't lose
