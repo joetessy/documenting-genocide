@@ -63,6 +63,9 @@ async function start(): Promise<void> {
   console.log(`Loaded ${casualtyToll.length} daily casualty data points`);
   console.log(`Loaded ${facilities.length} facilities`);
 
+  // Data is in hand; the remaining wait is rendering the map + damage tiles.
+  loading.setStatus('Preparing the map…');
+
   const header = mountHeader(app, {
     incidents,
     damageStats,
@@ -473,9 +476,6 @@ async function start(): Promise<void> {
   map.once('load', lift);
   setTimeout(lift, 600);
 
-  // Wait for map's first paint before hiding loading. Use 'load' (fires once style
-  // is parsed and visible tiles are requested) rather than 'idle' — 'idle' may
-  // never fire if any tile request errors.
   function destroyLoadingAndResize(): void {
     loading.destroy();
     // Explicit resize because the canvas is sometimes created at the wrong
@@ -484,9 +484,35 @@ async function start(): Promise<void> {
     requestAnimationFrame(() => map.resize());
     setTimeout(() => map.resize(), 450);
   }
-  map.once('load', destroyLoadingAndResize);
-  // Safety fallback: hide loading after 8s no matter what.
-  setTimeout(destroyLoadingAndResize, 8000);
+
+  // Hold the loading screen until the initial view is genuinely rendered, not
+  // just until the basemap paints. The damage layer is the slow piece — its
+  // PMTiles archive downloads into memory before its tiles can draw — so we
+  // wait for an 'idle' (all viewport tiles loaded + drawn) where both the
+  // incident markers and the damage layer exist. This avoids data "popping in"
+  // after the splash and means the first zoom is instant (everything's already
+  // in memory). A fallback guarantees we never trap the user behind it.
+  let loadingDismissed = false;
+  function dismissLoading(): void {
+    if (loadingDismissed) return;
+    loadingDismissed = true;
+    map.off('idle', revealWhenReady);
+    destroyLoadingAndResize();
+  }
+  function revealWhenReady(): void {
+    if (loadingDismissed) return;
+    const damageId = damage.layerIds[0];
+    const ready =
+      map.getLayer('incidents-circles') != null &&
+      damageId != null && map.getLayer(damageId) != null &&
+      map.areTilesLoaded();
+    if (ready) dismissLoading();
+  }
+  map.on('idle', revealWhenReady);
+  // Safety net: reveal anyway after 20s (slow connection / failed tile) so the
+  // overlay can't strand the user. Longer than before because we now
+  // intentionally wait for the damage archive to download and render.
+  setTimeout(dismissLoading, 20000);
 
   // Extra resize on window 'load' (after all images/fonts settle) and on
   // window resize events. The first is a belt-and-suspenders fix for the
