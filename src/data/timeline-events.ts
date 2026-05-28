@@ -78,6 +78,17 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       'A Qatar- and Egypt-mediated week-long truce saw 105 hostages and 240 Palestinian prisoners released, with limited aid entering Gaza.',
   },
   {
+    date: '2024-01-29',
+    title: 'Killing of Hind Rajab',
+    description:
+      'Hind Rajab, six, was trapped in a car in Gaza City among relatives shot dead around her, pleading by phone for rescue. Two paramedics sent to save her were killed too; the car was later found struck by 335 bullets.',
+    focus: { lat: 31.5130, lon: 34.4350, zoom: 16, pitch: 52, bearing: -18 },
+    casualties: { killed: 9 },   // Hind, six relatives in the car, and two PRCS paramedics (reported total)
+    sources: [
+      { name: 'Wikipedia — Killing of Hind Rajab', url: 'https://en.wikipedia.org/wiki/Killing_of_Hind_Rajab' },
+    ],
+  },
+  {
     date: '2024-02-29',
     title: 'Flour Massacre at Nabulsi roundabout',
     description:
