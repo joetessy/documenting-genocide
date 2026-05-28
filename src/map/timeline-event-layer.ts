@@ -19,6 +19,9 @@ function toGeoJSON(events: TimelineEvent[]): GeoJSON.FeatureCollection {
             date: e.date,
             title: e.title,
             eventIndex: i,
+            // Casualty count drives the tier-step radius (matches incident markers).
+            // Default 0 for events that don't carry a per-marker casualty figure.
+            killed: e.casualties?.killed ?? 0,
           },
         };
       })
@@ -31,10 +34,12 @@ export interface TimelineEventLayerHandle {
   setVisible(visible: boolean): void;
 }
 
-// Curated major-event markers — distinct white-centre / red-ring "target"
-// look so they stand out from regular incident dots. One marker per event
-// that has a `focus` coordinate, gated by the scrubber so an event only
-// appears at or after its date.
+// Curated major-event markers — visually identical to regular incident dots
+// so they sit naturally inside the data. They remain a distinct layer because
+// clicks route them to the timeline-event side panel (with curated
+// description + sources) rather than the incident panel. One marker per
+// event that has a `focus` coordinate, gated by the scrubber so an event
+// only appears at or after its date.
 export function mountTimelineEventLayer(map: Map, events: TimelineEvent[]): TimelineEventLayerHandle {
   let pendingDate: string | null = null;
   let layerReady = false;
@@ -55,15 +60,17 @@ export function mountTimelineEventLayer(map: Map, events: TimelineEvent[]): Time
       type: 'circle',
       source: SOURCE_ID,
       paint: {
+        // Match marker-layer.ts incident styling exactly — same color, stroke,
+        // and tiered radius by `killed` count.
         'circle-radius': [
           'interpolate', ['linear'], ['zoom'],
-          9, 7,
-          14, 13,
-          17, 18,
+          9,  ['step', ['number', ['get', 'killed'], 0], 3,    10, 4.5,  50, 6.5,  100, 9],
+          14, ['step', ['number', ['get', 'killed'], 0], 6,    10, 9,    50, 13,   100, 18],
+          17, ['step', ['number', ['get', 'killed'], 0], 9,    10, 13,   50, 18,   100, 24],
         ],
-        'circle-color': '#ffffff',
-        'circle-stroke-color': '#d3091e',
-        'circle-stroke-width': 2.5,
+        'circle-color': '#e63946',
+        'circle-stroke-color': '#000000',
+        'circle-stroke-width': 1.5,
         'circle-opacity': 1,
         'circle-stroke-opacity': 1,
       },
