@@ -32,6 +32,7 @@ async function start(): Promise<void> {
   app.appendChild(mapEl);
 
   const map = mountMap(mapEl);
+  (window as unknown as { __map: unknown }).__map = map;
   mountOnboarding(app);
 
   const aboutModal = mountAboutModal(app);

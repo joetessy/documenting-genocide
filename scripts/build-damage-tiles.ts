@@ -74,16 +74,23 @@ async function main(): Promise<void> {
   const tmpPath = join(tmpdir(), 'damage-for-tiles.geojsonl');
   await writeFile(tmpPath, lines.join('\n'));
 
-  // -Z5..-z16: full point detail at high zoom (no dropping where tiles are
-  // small), --drop-densest-as-needed thins the dense low-zoom overview tiles so
-  // they stay under the size limit (and the map holds far fewer points zoomed out).
+  // Generate z8..z16 (z8 is the map's minZoom — no point tiling lower).
+  //
+  // Keep the overview visually "filled in": `-r1` disables tippecanoe's default
+  // per-zoom drop-rate thinning (which otherwise strips most points from the
+  // zoomed-out tiles), so every point shows at every zoom the user views.
+  // --drop-densest-as-needed + a generous 3MB tile budget is left only as a
+  // safety valve for the single densest low-zoom tile. High-zoom tiles stay
+  // small, so the map still only holds the visible tiles in memory.
   console.log('Tiling with tippecanoe…');
   execFileSync('tippecanoe', [
     '-o', OUT_PMTILES,
     '-l', 'damage',
-    '-Z', '5',
-    '-z', '16',
+    '-Z', '8',
+    '-z', '14',
+    '-r1',
     '--drop-densest-as-needed',
+    '--maximum-tile-bytes=3000000',
     '--force',
     '--quiet',
     tmpPath,
