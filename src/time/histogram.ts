@@ -49,6 +49,28 @@ export function bucketDamageByDay(
   return buckets;
 }
 
+// Bucket pre-aggregated per-date damage counts into the day-indexed array the
+// histogram renders. Used in place of bucketDamageByDay now that the client
+// holds per-assessment-date totals (from damage-stats.json) rather than the
+// full set of damage features.
+export function bucketDamageByDate(
+  perDate: Array<{ date: string; count: number }>,
+  start: string,
+  end: string,
+): number[] {
+  const days = daysBetween(start, end) + 1;
+  const buckets = new Array<number>(days).fill(0);
+  const startMs = new Date(`${start}T00:00:00Z`).getTime();
+  const endMs = new Date(`${end}T00:00:00Z`).getTime();
+  for (const { date, count } of perDate) {
+    const t = new Date(`${date}T00:00:00Z`).getTime();
+    if (t < startMs || t > endMs) continue;
+    const idx = Math.round((t - startMs) / MS_PER_DAY);
+    buckets[idx] += count;
+  }
+  return buckets;
+}
+
 // Render two stacked density series in the histogram host: damage on top (tan,
 // big numbers), incidents below (red, small numbers). Each series uses its own
 // max so both register visually despite the ~1000x scale difference.

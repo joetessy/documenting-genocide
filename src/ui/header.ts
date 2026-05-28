@@ -1,5 +1,5 @@
 import type { Incident } from '@shared/types';
-import type { DailyCasualty } from '../data/loader';
+import type { DailyCasualty, DamageStats } from '../data/loader';
 
 export interface HeaderHandle {
   updateForDate(date: string): void;
@@ -7,11 +7,6 @@ export interface HeaderHandle {
 
 interface Cumulative {
   // Parallel arrays: dateStrings[i] is the ISO date, counts[i] is cumulative count through that date.
-  dateStrings: string[];
-  cumCount: number[];
-}
-
-interface DamageCumulative {
   dateStrings: string[];
   cumCount: number[];
 }
@@ -33,24 +28,6 @@ function buildIncidentCumulative(incidents: Incident[]): Cumulative {
   const byDate = new Map<string, number>();
   for (const inc of incidents) {
     byDate.set(inc.date, (byDate.get(inc.date) ?? 0) + 1);
-  }
-  const dates = [...byDate.keys()].sort();
-  const cumCount: number[] = [];
-  let cc = 0;
-  for (const d of dates) {
-    cc += byDate.get(d)!;
-    cumCount.push(cc);
-  }
-  return { dateStrings: dates, cumCount };
-}
-
-function buildDamageCumulative(features: Array<{ properties?: { assessment_date?: string; status?: string } }>): DamageCumulative {
-  const byDate = new Map<string, number>();
-  for (const f of features) {
-    if (f.properties?.status !== 'destroyed') continue;
-    const d = f.properties?.assessment_date;
-    if (!d) continue;
-    byDate.set(d, (byDate.get(d) ?? 0) + 1);
   }
   const dates = [...byDate.keys()].sort();
   const cumCount: number[] = [];
@@ -105,7 +82,7 @@ export function mountHeader(
   parent: HTMLElement,
   opts: {
     incidents: Incident[];
-    damageFeatures: Array<{ properties?: { assessment_date?: string; status?: string } }>;
+    damageStats: DamageStats;
     casualtyToll: DailyCasualty[];
   },
 ): HeaderHandle {
@@ -122,7 +99,7 @@ export function mountHeader(
   parent.appendChild(el);
 
   const incidentCum = buildIncidentCumulative(opts.incidents);
-  const damageCum = buildDamageCumulative(opts.damageFeatures);
+  const damageCum = opts.damageStats;   // precomputed cumulative destroyed counts
   const casualtyLookup = buildCasualtyLookup(opts.casualtyToll);
 
   const elKilled = el.querySelector<HTMLElement>('#stat-killed')!;

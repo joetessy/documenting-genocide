@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build-data": "tsx scripts/build-data.ts",
+    "build-damage-tiles": "tsx scripts/build-damage-tiles.ts",
     "deploy": "pnpm run build && wrangler deploy"
   },
   "dependencies": {

@@ -1,6 +1,13 @@
 import maplibregl, { Map, NavigationControl } from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
 import { gazaStyle } from './style';
 import { GAZA_OUTLINE, GAZA_MASK_POLYGON } from './gaza-boundary';
+
+// Register the pmtiles:// protocol once so the damage vector source can read
+// the single-file PMTiles archive via HTTP range requests (only the visible
+// tiles are fetched, instead of the whole 43MB GeoJSON up front).
+const pmtilesProtocol = new Protocol();
+maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
 
 // Tighter navigation bounds. The cream wall+mask combination hides everything
 // outside Gaza, but we also keep the camera centered so the user can't lose

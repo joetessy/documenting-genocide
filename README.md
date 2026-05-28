@@ -30,6 +30,7 @@ After cross-source dedup (~55 m precision, `(date, lat3, lon3)` keyed): **2,315 
 pnpm install
 pnpm dev                  # http://localhost:5173
 pnpm build-data           # refresh the data pipeline (uses cached raw data; pass --refresh to re-pull)
+pnpm build-damage-tiles   # regenerate damage.pmtiles + damage-stats.json from the damage data (needs tippecanoe; commit the output)
 pnpm test                 # 182 tests across 15 files (Vitest)
 pnpm typecheck            # exits 0
 pnpm build                # production build: typecheck + build-data + vite build
@@ -111,7 +112,7 @@ documenting-genocide/
 │   │   ├── style.ts                     custom pen-and-ink basemap style
 │   │   ├── gaza-boundary.ts             embedded 161-vertex polygon + inverse mask
 │   │   ├── marker-layer.ts              incident red-circle layer, casualty-tier sizing
-│   │   ├── damage-layer.ts              196K damage circles, debounced time-gating
+│   │   ├── damage-layer.ts              damage circles from PMTiles vector tiles, date-gated by setFilter
 │   │   ├── facility-layer.ts            health + education facility points
 │   │   └── timeline-event-layer.ts      curated white-centre/red-ring major-event markers
 │   ├── time/
@@ -212,13 +213,14 @@ If you're adding a new source, [`fetch-geoconfirmed.ts`](scripts/fetch-geoconfir
 A few decisions that have bitten this codebase before and may bite again:
 
 - **Safari rate-limits `history.replaceState()`** to ~100 calls per 10 s. The scrubber's URL-hash update is debounced 300 ms so a fast drag doesn't exceed the limit.
-- **MapLibre's `setFilter()` on the 196 K-feature damage layer costs 50–300 ms per call.** Damage filter updates are debounced 120 ms; markers, header, and the URL hash all stay responsive during a drag while the damage layer catches up after the user pauses.
+- **Scrubbing the damage layer is cheap because it's vector-tiled.** Each loaded tile holds only its own features, so the `setFilter()` date-gate on `damage-circles` is fast (no debounce). This replaced an earlier single 196K-feature GeoJSON where `setFilter()` cost 50–300 ms per call.
 - **MapLibre `within` filters can't be combined with legacy filters.** [`map.ts`](src/map/map.ts) sets the filter to the `within` expression directly — combining throws "within not allowed".
 - **3D-tilted clicks need padding.** A bbox of `±6 px` around the click point is used by the click router in `main.ts` so a tilted user can still hit a foreshortened dot.
 - **One click handler at a time.** Multiple `map.on('click', layer, ...)` handlers fire in registration order and overwrite each other. The current design uses one click handler that calls `queryRenderedFeatures` with a layer priority list. Append to `CLICK_LAYER_PRIORITY` rather than adding per-layer handlers.
 - **Damage layer's "Buildings destroyed" stat counts only `status === 'destroyed'`** (severe/moderate/possibly are visible but excluded from the headline number).
 - **Killed counter uses MoH cumulative totals**, not a sum of per-incident `killed` fields. Per-incident reporting only covers a fraction of events; summing them would undercount by an order of magnitude.
-- **`pmtiles` is a dependency but unused.** Retained from a retired protomaps experiment; safe to remove if future cleanup wants the tree trimmed.
+- **The damage layer is served as PMTiles vector tiles** (`public/damage.pmtiles`), not a single GeoJSON — the map only holds the visible tiles in memory. Generate it locally with `pnpm build-damage-tiles` (needs tippecanoe; can't run in the Cloudflare build), then commit `damage.pmtiles` + `damage-stats.json`. This means the damage data is **frozen** between local regenerations, so re-run after OCHA publishes a new assessment (~quarterly). Incidents/casualty/facility data still auto-refresh on every deploy via `build-data`.
+- **The header's "Buildings destroyed" counter** reads cumulative counts from `damage-stats.json` (built alongside the tiles), since the full damage GeoJSON is no longer loaded client-side.
 
 ---
 

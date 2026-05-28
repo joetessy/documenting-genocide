@@ -5,11 +5,11 @@ import { mountMarkers } from './map/marker-layer';
 import { mountDamageLayer } from './map/damage-layer';
 import { mountFacilityLayer } from './map/facility-layer';
 import { mountTimelineEventLayer } from './map/timeline-event-layer';
-import { loadIncidents, loadDamage, loadFacilities, loadCasualtyToll } from './data/loader';
+import { loadIncidents, loadDamageStats, loadFacilities, loadCasualtyToll, type DamageFeature } from './data/loader';
 import { TimeController } from './time/time-controller';
 import { TourController } from './time/tour-controller';
 import { mountScrubber } from './time/scrubber';
-import { bucketByDay, bucketDamageByDay, renderHistogram } from './time/histogram';
+import { bucketByDay, bucketDamageByDate, renderHistogram } from './time/histogram';
 import { mountTooltip } from './ui/tooltip';
 import { mountSidePanel } from './ui/side-panel';
 import { mountLoading } from './ui/loading';
@@ -44,29 +44,28 @@ async function start(): Promise<void> {
   app.appendChild(aboutBtn);
 
   loading.setStatus('Loading data…');
-  // Kick off all four fetches in parallel. They were previously sequential
-  // awaits which added up the network/parse times; running them concurrently
-  // bounds total time to the slowest one (the damage .gz, which also needs
-  // client-side decompression).
+  // Kick off all four fetches in parallel. Damage is now just a tiny stats
+  // file (cumulative counts + per-date histogram totals) — the damage features
+  // themselves stream in as PMTiles vector tiles, so we no longer download or
+  // parse a 43MB GeoJSON here.
   const [
     { incidents, meta },
-    damageData,
+    damageStats,
     casualtyToll,
     facilities,
   ] = await Promise.all([
     loadIncidents(),
-    loadDamage(),
+    loadDamageStats(),
     loadCasualtyToll(),
     loadFacilities(),
   ]);
   console.log(`Loaded ${incidents.length} incidents (${meta.unplotted_count} unplotted), build ${meta.build_date}`);
-  console.log(`Loaded ${damageData.features.length} damage features`);
   console.log(`Loaded ${casualtyToll.length} daily casualty data points`);
   console.log(`Loaded ${facilities.length} facilities`);
 
   const header = mountHeader(app, {
     incidents,
-    damageFeatures: damageData.features,
+    damageStats,
     casualtyToll,
   });
 
@@ -75,7 +74,7 @@ async function start(): Promise<void> {
   const sidePanel = mountSidePanel(app);
   const byId = new Map(incidents.map((i) => [i.id, i]));
 
-  const damage = await mountDamageLayer(map, damageData as unknown as GeoJSON.FeatureCollection);
+  const damage = await mountDamageLayer(map);
   damage.setVisible(true);
 
   const facilityLayer = await mountFacilityLayer(map, facilities);
@@ -184,7 +183,7 @@ async function start(): Promise<void> {
 
   const histogramHost = mountScrubber(app, timeCtrl);
   const incidentBuckets = bucketByDay(incidents, timeCtrl.start, timeCtrl.end);
-  const damageBuckets = bucketDamageByDay(damageData.features, timeCtrl.start, timeCtrl.end);
+  const damageBuckets = bucketDamageByDate(damageStats.perDate, timeCtrl.start, timeCtrl.end);
   const drawHistogram = (): void => renderHistogram(
     histogramHost,
     incidentBuckets,
@@ -331,9 +330,9 @@ async function start(): Promise<void> {
     tooltip.hide();
   });
 
-  // Build a quick lookup of damage features by id, so clicks can hydrate the panel.
-  const damageById = new Map(damageData.features.map((f) => [f.id, f]));
-
+  // Damage detail comes straight off the clicked vector-tile feature's
+  // properties (see the click router below) — there's no in-memory GeoJSON to
+  // look up anymore. `progression` rides along as a JSON string in the tile.
   const facilityById = new Map(facilities.map((f) => [f.id, f]));
 
   // One click handler that picks the topmost relevant layer at the click
@@ -394,11 +393,30 @@ async function start(): Promise<void> {
           setHashIncident(incident.id);
         }
       } else if (isDamageLayer(layerId)) {
-        const damageFeat = damageById.get(id);
-        if (damageFeat) {
-          sidePanel.openDamage(damageFeat);
-          setHashIncident(null);
+        // Build the panel feature from the clicked vector tile's properties.
+        // `progression` is carried as a JSON string (MVT props are scalar-only).
+        const props = hit.properties ?? {};
+        let progression: DamageFeature['properties']['progression'];
+        if (typeof props.progression === 'string') {
+          try { progression = JSON.parse(props.progression); } catch { /* ignore */ }
         }
+        const geom = hit.geometry.type === 'Point'
+          ? (hit.geometry.coordinates as [number, number])
+          : [0, 0] as [number, number];
+        const damageFeat: DamageFeature = {
+          type: 'Feature',
+          id,
+          geometry: { type: 'Point', coordinates: geom },
+          properties: {
+            id,
+            status: String(props.status ?? ''),
+            assessment_date: String(props.assessment_date ?? ''),
+            governorate: typeof props.governorate === 'string' ? props.governorate : undefined,
+            progression,
+          },
+        };
+        sidePanel.openDamage(damageFeat);
+        setHashIncident(null);
       } else if (layerId === 'facilities-health' || layerId === 'facilities-education') {
         const fac = facilityById.get(id);
         if (fac) {
