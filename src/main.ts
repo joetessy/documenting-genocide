@@ -87,6 +87,10 @@ async function start(): Promise<void> {
     if (map.getLayer('incidents-circles')) {
       map.setLayoutProperty('incidents-circles', 'visibility', s.incidents ? 'visible' : 'none');
     }
+    // Timeline events render with the same visual treatment as incident dots,
+    // so the Incidents toggle controls them too — otherwise unchecking would
+    // leave a handful of unexplained red dots behind.
+    timelineEventLayer.setVisible(s.incidents);
     const enabledCats = (Object.entries(s.incidentCategories) as [string, boolean][])
       .filter(([, v]) => v)
       .map(([k]) => k);
