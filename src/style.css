@@ -1371,4 +1371,90 @@ button { font-family: inherit; }
   background: #2a2520;
 }
 
+/* ───────────────────────────────────────────────────────────────────────────
+   Mobile — narrow-viewport adjustments. Desktop styles above are untouched.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Header: compact, fits the full top edge with safe-area gutter. */
+  #header {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    max-width: none;
+    padding: 9px 12px 11px;
+  }
+  #header .day-header { font-size: 15px; }
+  #header .stats { margin-top: 7px; gap: 18px; }
+  #header .stat { font-size: 9px; letter-spacing: 0.05em; }
+  #header .stat strong { font-size: 17px; margin-bottom: 2px; }
+
+  /* Legend: sits just below the header. The mouse-only controls section is
+     hidden (touch users don't need pan/zoom/Ctrl+drag instructions). JS adds
+     `.is-collapsed` at mount on mobile so the panel starts as a single chip. */
+  #layer-toggle {
+    top: 96px;
+    left: 10px;
+    right: auto;
+    width: auto;
+    max-width: calc(100vw - 20px);
+    padding: 9px 11px 10px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    font-size: 12px;
+  }
+  #layer-toggle .lt-controls { display: none; }
+
+  /* Tour button: sits above the scrubber on the left, smaller chip. */
+  #tour-btn {
+    bottom: 70px;
+    left: 10px;
+    padding: 7px 14px 7px 10px;
+    font-size: 12px;
+    border-radius: 18px;
+  }
+
+  /* About: above the scrubber on the right, smaller. */
+  #about-trigger {
+    bottom: 70px;
+    right: 10px;
+    padding: 6px 11px;
+    font-size: 10px;
+  }
+
+  /* Scrubber: hugs the bottom edge with a small gutter. */
+  #scrubber {
+    bottom: 10px;
+    width: calc(100vw - 20px);
+    padding: 8px 12px 10px;
+    gap: 10px;
+  }
+  #scrubber .date-label { font-size: 11px; }
+
+  /* Side panel: full-width slide-in covers the map for readability. */
+  #side-panel {
+    width: 100vw;
+    max-width: 100%;
+    top: 0;
+    right: 0;
+    max-height: 100vh;
+    border-radius: 0;
+    transform: translateX(100%);
+  }
+
+  /* Tour narrator card: full width above the scrubber + tour button row. */
+  #tour-card {
+    left: 10px;
+    right: 10px;
+    bottom: 120px;
+    width: auto;
+    max-width: none;
+    padding: 16px 18px 18px;
+  }
+  #tour-card .tc-title { font-size: 18px; }
+  #tour-card .tc-desc { font-size: 13px; }
+
+  /* Onboarding modal: tighter padding so it fits comfortably. */
+  #onboarding-card { padding: 22px 22px 22px; }
+  #onboarding-card #onboarding-title { font-size: 18px; }
+}
 

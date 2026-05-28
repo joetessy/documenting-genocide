@@ -168,6 +168,16 @@ export function mountLayerToggle(parent: HTMLElement): LayerToggleHandle {
     caret.textContent = isOpen ? '▸' : '▾';
   });
 
+  // On narrow viewports the legend competes with the map for vertical space,
+  // so start collapsed and let the user tap to open. Matches the same
+  // breakpoint as the mobile CSS rules in style.css.
+  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches) {
+    el.classList.add('is-collapsed');
+    collapseBtn.setAttribute('aria-expanded', 'false');
+    body.hidden = true;
+    caret.textContent = '▸';
+  }
+
   return {
     onChange(fn) { listeners.push(fn); },
   };
