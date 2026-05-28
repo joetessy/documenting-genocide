@@ -133,6 +133,17 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     ],
   },
   {
+    date: '2024-06-08',
+    title: 'Nuseirat massacre and hostage rescue',
+    description:
+      'Israeli forces stormed Nuseirat refugee camp to free four hostages, killing about 274 Palestinians in a crowded market and camp. Scrutiny fell on whether the nearby US-built aid pier played a role.',
+    focus: { lat: 31.4500, lon: 34.3900, zoom: 15, pitch: 45, bearing: 12 },
+    casualties: { killed: 274, injured: 698 },   // Gaza Ministry of Health; Israel disputed the toll
+    sources: [
+      { name: 'Wikipedia — Nuseirat rescue operation', url: 'https://en.wikipedia.org/wiki/Nuseirat_rescue_operation' },
+    ],
+  },
+  {
     date: '2024-08-10',
     title: 'Al-Tabaeen school strike',
     description:
@@ -171,6 +182,16 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     title: "Operation Gideon's Chariots launched",
     description:
       'A new offensive aimed at seizing more of Gaza despite famine warnings and intensifying international pressure.',
+  },
+  {
+    date: '2025-05-27',
+    title: 'Killings at Gaza Humanitarian Foundation sites',
+    description:
+      'After the US- and Israel-backed Gaza Humanitarian Foundation replaced UN aid in May 2025, Israeli forces repeatedly fired on crowds seeking food at its sites — which the UN called "death traps" — killing hundreds.',
+    focus: { lat: 31.2950, lon: 34.2450, zoom: 14, pitch: 30, bearing: -12 },
+    sources: [
+      { name: 'Wikipedia — Gaza Humanitarian Foundation', url: 'https://en.wikipedia.org/wiki/Gaza_Humanitarian_Foundation' },
+    ],
   },
   {
     date: '2025-08-22',
