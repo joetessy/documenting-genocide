@@ -41,17 +41,6 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       'Palestinian resistance groups attacked southern Israel, killing roughly 1,200 Israelis and taking 251 hostages, triggering the war.',
   },
   {
-    date: '2023-10-17',
-    title: 'Al-Ahli Arab Hospital explosion',
-    description:
-      'A blast in the hospital courtyard killed hundreds of Palestinians sheltering there.',
-    focus: { lat: 31.5053, lon: 34.4614, zoom: 16, pitch: 55, bearing: -25 },
-    casualties: { killed: 471 },   // Gaza Ministry of Health figure; estimates range widely
-    sources: [
-      { name: 'Wikipedia — Al-Ahli Arab Hospital explosion', url: 'https://en.wikipedia.org/wiki/Al-Ahli_Arab_Hospital_explosion' },
-    ],
-  },
-  {
     date: '2023-10-27',
     title: 'Israeli ground invasion begins',
     description:
@@ -86,15 +75,6 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     title: 'First humanitarian pause begins',
     description:
       'A Qatar- and Egypt-mediated week-long truce saw 105 hostages and 240 Palestinian prisoners released, with limited aid entering Gaza.',
-  },
-  {
-    date: '2024-01-26',
-    title: 'ICJ orders Israel to prevent genocide',
-    description:
-      'In the case brought by South Africa, the International Court of Justice found a plausible risk of genocide in Gaza and ordered Israel to take measures to prevent genocidal acts.',
-    sources: [
-      { name: 'Wikipedia — South Africa v. Israel (Genocide Convention)', url: 'https://en.wikipedia.org/wiki/South_Africa_v._Israel_(Genocide_Convention)' },
-    ],
   },
   {
     date: '2024-01-29',
@@ -141,17 +121,6 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     ],
   },
   {
-    date: '2024-05-26',
-    title: 'Tel al-Sultan tent camp strike',
-    description:
-      'Israeli airstrikes hit a displaced-persons camp in the Tel al-Sultan area of Rafah, igniting a fire through the tents and shipping containers that civilians had been sheltering in.',
-    focus: { lat: 31.3200, lon: 34.2700, zoom: 16, pitch: 42, bearing: 25 },
-    casualties: { killed: 45, injured: 200 },
-    sources: [
-      { name: 'Wikipedia — Tel al-Sultan attack', url: 'https://en.wikipedia.org/wiki/Tel_al-Sultan_attack' },
-    ],
-  },
-  {
     date: '2024-06-08',
     title: 'Nuseirat massacre and hostage rescue',
     description:
@@ -160,17 +129,6 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     casualties: { killed: 274, injured: 698 },   // Gaza Ministry of Health; Israel disputed the toll
     sources: [
       { name: 'Wikipedia — Nuseirat rescue operation', url: 'https://en.wikipedia.org/wiki/Nuseirat_rescue_operation' },
-    ],
-  },
-  {
-    date: '2024-08-10',
-    title: 'Al-Tabaeen school strike',
-    description:
-      'Pre-dawn airstrikes hit a school complex in the Al-Daraj neighbourhood of Gaza City that was sheltering displaced families. Many were killed during the fajr prayer.',
-    focus: { lat: 31.5200, lon: 34.4700, zoom: 16, pitch: 52, bearing: -8 },
-    casualties: { killed: 93 },
-    sources: [
-      { name: 'Wikipedia — Al-Tabaeen school attack', url: 'https://en.wikipedia.org/wiki/Al-Tabaeen_school_attack' },
     ],
   },
   {
@@ -216,12 +174,6 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
       "Following the first phase's collapse, Israel resumed large-scale airstrikes and ground operations after a two-month pause.",
   },
   {
-    date: '2025-05-19',
-    title: "Operation Gideon's Chariots launched",
-    description:
-      'A new offensive aimed at seizing more of Gaza despite famine warnings and intensifying international pressure.',
-  },
-  {
     date: '2025-05-27',
     title: 'Killings at Gaza Humanitarian Foundation sites',
     description:
@@ -258,11 +210,5 @@ export const TIMELINE_EVENTS: TimelineEvent[] = [
     title: 'Phase-one ceasefire takes effect',
     description:
       'A US-brokered twenty-point peace plan entered its first phase: living hostages and remains exchanged for Palestinian prisoners, a partial IDF withdrawal, and expanded humanitarian aid.',
-  },
-  {
-    date: '2025-11-17',
-    title: 'UN Security Council endorses ceasefire',
-    description:
-      'The Security Council formally endorsed the phase-one ceasefire framework, calling on parties to implement subsequent phases including reconstruction and governance arrangements.',
   },
 ];
