@@ -33,6 +33,22 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
   track.setAttribute('aria-label', 'Date scrubber');
   trackWrap.appendChild(track);
 
+  // Custom playhead. The native range thumb is clamped inside the track, so at
+  // the extremes its centre sits half-a-thumb in — misaligned from the
+  // histogram (and event ticks), which span the full width. We hide the native
+  // thumb (see CSS) and position this ball at the exact date fraction with a
+  // translate(-50%) centre, so it lines up with the bars and ticks everywhere.
+  const playhead = document.createElement('div');
+  playhead.className = 'sb-playhead';
+  playhead.setAttribute('aria-hidden', 'true');
+  trackWrap.appendChild(playhead);
+
+  function syncPlayhead(): void {
+    const max = Number(track.max) || 1;
+    playhead.style.left = `${(Number(track.value) / max) * 100}%`;
+  }
+  syncPlayhead();
+
   const labelWrap = document.createElement('div');
   const label = document.createElement('div');
   label.className = 'date-label';
@@ -69,6 +85,7 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
   let latestValue = track.value;
   track.addEventListener('input', () => {
     latestValue = track.value;
+    syncPlayhead();   // immediate visual feedback, ahead of the rAF-batched filter
     if (rafPending) return;
     rafPending = true;
     requestAnimationFrame(() => {
@@ -86,6 +103,7 @@ export function mountScrubber(parent: HTMLElement, ctrl: TimeController): HTMLEl
   // Mirror controller state into UI on every change.
   ctrl.onChange((date) => {
     track.value = String(daysBetween(ctrl.start, date));
+    syncPlayhead();
     label.textContent = formatDate(date);
     if (!ctrl.isPlaying) updatePlayBtn();
   });

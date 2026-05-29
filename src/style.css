@@ -45,6 +45,8 @@ html, body {
 #app {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;   /* dynamic viewport: fits iOS Safari's visible area so the
+                       bottom controls aren't pushed under the address bar */
   overflow: hidden;
   position: relative;
 }
@@ -239,24 +241,41 @@ button { font-family: inherit; }
   height: 1px;
   background: var(--hairline-strong);
 }
+/* Native thumbs are kept full-size for drag/grab but transparent — the visible
+   ball is the custom .sb-playhead, which aligns with the histogram (the native
+   thumb is clamped inside the track and would sit off-centre at the ends). */
 #scrubber input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--ink-1);
+  background: transparent;
   border: none;
   cursor: grab;
   margin-top: -4px;     /* center 9px thumb on 1px track (track top at 17.5; thumb top 13.5) */
-  transition: transform 80ms;
 }
-#scrubber input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.25); }
+#scrubber input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
 #scrubber input[type="range"]::-moz-range-track { height: 1px; background: var(--hairline-strong); }
 #scrubber input[type="range"]::-moz-range-thumb {
   width: 9px; height: 9px; border-radius: 50%;
-  background: var(--ink-1); border: none;
+  background: transparent; border: none;
   cursor: grab;
+}
+
+/* The visible scrubber ball. Positioned at the exact date fraction (left %)
+   with a centred transform, so it tracks the histogram bars/ticks precisely. */
+#scrubber .sb-playhead {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-1);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 4;
+  transition: transform 80ms;
 }
 
 #scrubber .date-label {
@@ -795,6 +814,8 @@ button { font-family: inherit; }
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 0 0 auto;       /* don't let the columns shrink and squeeze the labels */
+  min-width: 30px;      /* even columns so dots + labels line up in a tidy grid */
 }
 #layer-toggle .lt-tier-num {
   margin-top: 3px;
@@ -803,6 +824,7 @@ button { font-family: inherit; }
   font-variant-numeric: tabular-nums;
   line-height: 1;
   letter-spacing: 0.01em;
+  white-space: nowrap;  /* keep "10–49" etc. on one line */
 }
 #layer-toggle .lt-tier-dot {
   border-radius: 50%;
@@ -1429,6 +1451,14 @@ button { font-family: inherit; }
     font-size: 12px;
   }
   #layer-toggle .lt-controls { display: none; }
+  /* Tighten the legend internals so the expanded panel fits without scrolling. */
+  #layer-toggle .lt-heading { margin-bottom: 6px; padding-bottom: 4px; }
+  #layer-toggle .lt-row { padding: 2px 0; }
+  #layer-toggle .lt-subrow { padding: 1px 0; }
+  #layer-toggle .lt-detail { margin: 3px 0 5px 20px; }
+  #layer-toggle .lt-detail-title { margin: 3px 0 2px; }
+  #layer-toggle .lt-tier-block { margin: 3px 0 5px 24px; gap: 7px; }
+  #layer-toggle .lt-tier-col { min-width: 28px; }
 
   /* Tour button: sits above the scrubber on the left, smaller chip. */
   #tour-btn {
@@ -1445,6 +1475,13 @@ button { font-family: inherit; }
     right: 10px;
     padding: 6px 11px;
     font-size: 10px;
+  }
+
+  /* Zoom/compass control: on mobile the About chip also drops to bottom:70,
+     so lift the control clear of it (and the scrubber). */
+  .maplibregl-ctrl-bottom-right {
+    right: 10px !important;
+    bottom: 108px !important;
   }
 
   /* Scrubber: hugs the bottom edge with a small gutter. */
