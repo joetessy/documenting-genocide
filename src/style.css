@@ -297,12 +297,14 @@ button { font-family: inherit; }
 .hist-event line {
   transition: opacity 120ms ease, stroke-width 120ms ease;
 }
-.hist-event:hover line {
+/* The event lines are pointer-events: none (inherited from #histogram-host)
+   so the underlying range slider always captures clicks and drags — even
+   directly over a marker. Hover/tap behaviour is driven by the track-wrap
+   pointer listeners in histogram.ts, which set .is-near on the closest
+   marker when the cursor is within PROX_PX of it. */
+.hist-event.is-near line {
   opacity: 1;
   stroke-width: 1.2;
-}
-.hist-event rect {
-  pointer-events: auto;
 }
 .hist-event-tooltip {
   position: absolute;

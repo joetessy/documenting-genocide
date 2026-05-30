@@ -3,6 +3,13 @@ import type { TimelineEvent } from '../data/timeline-events';
 
 const MS_PER_DAY = 86_400_000;
 
+// Pointer-proximity thresholds for the scrubber. PROX_PX is the radius around
+// an event marker (in CSS pixels) that counts as "near" for tooltip + tap-to-
+// jump. DRAG_PX is the movement threshold past which a pointerdown→pointerup
+// pair stops counting as a click and is treated as a scrubber drag instead.
+const PROX_PX = 6;
+const DRAG_PX = 4;
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] ?? c));
 }
@@ -71,12 +78,119 @@ export function bucketDamageByDate(
   return buckets;
 }
 
+// Module-level interaction state so the pointer listeners on the track-wrap
+// (attached once) can read the latest event positions + callback after each
+// re-render. Previously each event marker carried its own listeners via a
+// transparent SVG hit-rect (pointer-events: auto), which captured drags
+// intended for the underlying range slider — particularly on mobile where the
+// finger contact patch easily lands on a marker. Now the slider always wins
+// for pointer input, and the track-wrap synthesises hover/tap-to-jump from
+// pointer coordinates instead.
+interface EventHit {
+  ev: TimelineEvent;
+  xFrac: number;       // 0..1 across the track-wrap width
+  marker: SVGGElement; // for the visual "is-near" highlight
+}
+let eventHits: EventHit[] = [];
+let onEventActivate: ((ev: TimelineEvent) => void) | undefined;
+let trackWrapInstrumented: HTMLElement | null = null;
+let tooltipEl: HTMLDivElement | null = null;
+let highlightedMarker: SVGGElement | null = null;
+
+function findEventNear(trackWrap: HTMLElement, clientX: number): EventHit | null {
+  const rect = trackWrap.getBoundingClientRect();
+  const xPx = clientX - rect.left;
+  const w = rect.width;
+  let best: EventHit | null = null;
+  let bestDist = PROX_PX;
+  for (const hit of eventHits) {
+    const dist = Math.abs(xPx - hit.xFrac * w);
+    if (dist <= bestDist) {
+      best = hit;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+function attachTrackWrapInteractions(trackWrap: HTMLElement): void {
+  if (trackWrapInstrumented === trackWrap) return;
+  trackWrapInstrumented = trackWrap;
+
+  const setHighlight = (el: SVGGElement | null): void => {
+    if (highlightedMarker && highlightedMarker !== el) {
+      highlightedMarker.classList.remove('is-near');
+    }
+    if (el) el.classList.add('is-near');
+    highlightedMarker = el;
+  };
+
+  const showTooltip = (hit: EventHit): void => {
+    if (!tooltipEl) return;
+    tooltipEl.innerHTML =
+      `<span class="hist-event-tooltip-date">${hit.ev.date}</span>` +
+      `<span class="hist-event-tooltip-title">${escapeHtml(hit.ev.title)}</span>` +
+      `<span class="hist-event-tooltip-desc">${escapeHtml(hit.ev.description)}</span>`;
+    tooltipEl.style.left = `${hit.xFrac * trackWrap.clientWidth}px`;
+    tooltipEl.style.display = 'block';
+  };
+
+  const hideTooltip = (): void => {
+    if (tooltipEl) tooltipEl.style.display = 'none';
+  };
+
+  let downX: number | null = null;
+  let dragging = false;
+
+  trackWrap.addEventListener('pointerdown', (e) => {
+    downX = e.clientX;
+    dragging = false;
+  });
+
+  trackWrap.addEventListener('pointermove', (e) => {
+    if (downX !== null && Math.abs(e.clientX - downX) > DRAG_PX) dragging = true;
+    if (dragging) {
+      hideTooltip();
+      setHighlight(null);
+      return;
+    }
+    const hit = findEventNear(trackWrap, e.clientX);
+    if (hit) {
+      showTooltip(hit);
+      setHighlight(hit.marker);
+    } else {
+      hideTooltip();
+      setHighlight(null);
+    }
+  });
+
+  trackWrap.addEventListener('pointerleave', () => {
+    hideTooltip();
+    setHighlight(null);
+  });
+
+  trackWrap.addEventListener('pointerup', (e) => {
+    const startedHere = downX !== null;
+    const moved = startedHere ? Math.abs(e.clientX - (downX as number)) : 0;
+    downX = null;
+    dragging = false;
+    if (!startedHere || moved > DRAG_PX) return;
+    const hit = findEventNear(trackWrap, e.clientX);
+    if (hit && onEventActivate) onEventActivate(hit.ev);
+  });
+
+  trackWrap.addEventListener('pointercancel', () => {
+    downX = null;
+    dragging = false;
+  });
+}
+
 // Render two stacked density series in the histogram host: damage on top (tan,
 // big numbers), incidents below (red, small numbers). Each series uses its own
 // max so both register visually despite the ~1000x scale difference.
 // Optional `events` renders thin vertical markers at major dates; clicking
-// one calls `onEventClick` with the event, which the caller uses to jump the
-// scrubber to that date.
+// near one (≤ PROX_PX) with no drag calls `onEventClick`, used by the caller
+// to jump the scrubber and focus the camera on that event.
 export function renderHistogram(
   host: HTMLElement,
   incidents: number[],
@@ -87,11 +201,13 @@ export function renderHistogram(
 ): void {
   host.innerHTML = '';
 
-  // Custom tooltip for event markers — appears immediately on hover.
+  // Custom tooltip for event markers — driven by pointermove on the track-wrap.
   const tooltip = document.createElement('div');
   tooltip.className = 'hist-event-tooltip';
   tooltip.style.display = 'none';
   host.appendChild(tooltip);
+  tooltipEl = tooltip;
+  highlightedMarker = null;
 
   const w = host.clientWidth;
   const h = host.clientHeight;
@@ -142,8 +258,11 @@ export function renderHistogram(
     svg.appendChild(rect);
   }
 
-  // Event markers: thin vertical lines at major dates with a wider transparent
-  // hit area for hover and click. A native <title> provides the browser tooltip.
+  // Event markers: thin vertical lines at major dates. The lines are purely
+  // visual — interactivity (hover tooltip, tap-to-jump) lives on the track-
+  // wrap parent so the underlying range-slider keeps full pointer control of
+  // the drag, even directly over a marker. See attachTrackWrapInteractions.
+  const newHits: EventHit[] = [];
   if (events && events.length > 0) {
     const eventGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     eventGroup.setAttribute('class', 'hist-events');
@@ -163,38 +282,19 @@ export function renderHistogram(
       line.setAttribute('stroke-width', '0.5');
       line.setAttribute('opacity', '0.85');
       line.setAttribute('vector-effect', 'non-scaling-stroke');
-
-      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      hit.setAttribute('x', String(xDays - 1.5));
-      hit.setAttribute('y', '0');
-      hit.setAttribute('width', '3');
-      hit.setAttribute('height', String(h));
-      hit.setAttribute('fill', 'transparent');
-      hit.style.cursor = 'pointer';
-
-      hit.addEventListener('mouseenter', () => {
-        tooltip.innerHTML = `<span class="hist-event-tooltip-date">${ev.date}</span><span class="hist-event-tooltip-title">${escapeHtml(ev.title)}</span><span class="hist-event-tooltip-desc">${escapeHtml(ev.description)}</span>`;
-        tooltip.style.display = 'block';
-        // Position the tooltip horizontally over the marker, anchored to its bottom.
-        // We compute the marker's screen-x by dividing the viewBox-x by the total
-        // days and multiplying by the host width.
-        const xPx = ((xDays + 0.5) / days) * w;
-        tooltip.style.left = `${xPx}px`;
-      });
-      hit.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-      });
-
-      hit.addEventListener('click', () => {
-        if (onEventClick) onEventClick(ev);
-      });
-
       markerGroup.appendChild(line);
-      markerGroup.appendChild(hit);
       eventGroup.appendChild(markerGroup);
+
+      newHits.push({ ev, xFrac: (xDays + 0.5) / days, marker: markerGroup });
     }
     svg.appendChild(eventGroup);
   }
 
   host.appendChild(svg);
+
+  eventHits = newHits;
+  onEventActivate = onEventClick;
+
+  const trackWrap = host.parentElement;
+  if (trackWrap) attachTrackWrapInteractions(trackWrap);
 }
