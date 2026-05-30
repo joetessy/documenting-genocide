@@ -178,15 +178,15 @@ const LAYERS: LayerSpecification[] = [
     layout: {
       'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name']],
       'text-font': ['Noto Sans Bold'],
-      'text-size': ['interpolate', ['linear'], ['zoom'], 9, 13, 14, 22],
+      'text-size': 16,    // constant across zoom — keeps city labels consistent as you pan/zoom
       'text-anchor': 'center',
       'text-padding': 4,
     },
     paint: {
       'text-color': COLORS.label,
       'text-halo-color': COLORS.paper,
-      'text-halo-width': 4,
-      'text-halo-blur': 1.5,
+      'text-halo-width': 2.5,
+      'text-halo-blur': 1,
     },
   },
   {

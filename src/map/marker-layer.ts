@@ -84,7 +84,7 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
         ],
         'circle-color': '#e63946',
         'circle-stroke-color': '#000000',
-        'circle-stroke-width': 1.5,
+        'circle-stroke-width': 0.75,
         'circle-opacity': 0.9,
       },
       // Use pendingDate if set; otherwise hide everything until the controller
@@ -92,7 +92,7 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
       filter: pendingDate
         ? ['<=', ['get', 'date'], pendingDate]
         : ['<=', ['get', 'date'], '1900-01-01'],
-    });
+    }, 'place-neighbourhood');   // keep below city/neighbourhood labels
 
     map.addLayer({
       id: HOVERED_ID,
@@ -109,11 +109,11 @@ export function mountMarkers(map: Map, incidents: Incident[]): MarkerLayerHandle
         ],
         'circle-color': '#e63946',
         'circle-stroke-color': '#000000',
-        'circle-stroke-width': 2,
+        'circle-stroke-width': 1,
         'circle-opacity': 1,
       },
       filter: ['==', ['get', 'id'], pendingHoveredId ?? ''],
-    });
+    }, 'place-neighbourhood');
 
     layerReady = true;
   }

@@ -77,7 +77,11 @@ export function mountTimelineEventLayer(map: Map, events: TimelineEvent[]): Time
       filter: pendingDate
         ? (['<=', ['get', 'date'], pendingDate] as never)
         : (['<=', ['get', 'date'], '1900-01-01'] as never),
-    });
+    },
+    // Insert below the city/neighbourhood labels so map text stays on top of
+    // event markers regardless of when lift() runs (the damage PMTiles can
+    // arrive after the lift timeout on slow connections).
+    'place-neighbourhood');
     layerReady = true;
     applyFilter();
   };
