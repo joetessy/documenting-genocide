@@ -172,8 +172,13 @@ const LAYERS: LayerSpecification[] = [
     id: 'place-city',
     type: 'symbol',
     source: 'openmaptiles',
+    // OSM tags several self-standing Gaza settlements as `village` (Bani
+    // Suheila, Abasan, Khuza'a, some refugee-camp towns). Treat them like
+    // cities/towns so all independent places render at the same size — only
+    // genuine subdivisions of a city (neighbourhood/suburb) drop to the
+    // smaller secondary style below.
     'source-layer': 'place',
-    filter: ['in', 'class', 'city', 'town'],
+    filter: ['in', 'class', 'city', 'town', 'village'],
     minzoom: 9,
     layout: {
       'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name']],
@@ -194,7 +199,7 @@ const LAYERS: LayerSpecification[] = [
     type: 'symbol',
     source: 'openmaptiles',
     'source-layer': 'place',
-    filter: ['in', 'class', 'neighbourhood', 'suburb', 'village'],
+    filter: ['in', 'class', 'neighbourhood', 'suburb'],
     minzoom: 12,
     layout: {
       'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name']],
