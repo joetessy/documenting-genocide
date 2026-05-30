@@ -71,14 +71,11 @@ export class TourController {
 
   private next(): void {
     this.currentIdx++;
+    // Wrap back to the first event so the guided tour loops continuously
+    // until the user stops it.
     if (this.currentIdx >= this.events.length) {
-      this.narrator.hide();
-      this.cameraEaseTo(null);
-      this.highlightLandmark(null);
-      this.timeCtrl.setDate(this.timeCtrl.end);
-      this._isPlaying = false;
-      this.onStateChange?.(false);
-      return;
+      if (this.events.length === 0) return;
+      this.currentIdx = 0;
     }
     const ev = this.events[this.currentIdx];
     this.timeCtrl.setDate(ev.date);
