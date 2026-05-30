@@ -69,6 +69,26 @@ export class TourController {
     else this.start();
   }
 
+  // Skip to the next event immediately (clear the auto-advance timer).
+  // No-op when not playing. The internal next() handles wrap-around.
+  goNext(): void {
+    if (!this._isPlaying) return;
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    this.next();
+  }
+
+  // Skip to the previous event immediately. Wraps to the last event when at
+  // the first. No-op when not playing.
+  goPrev(): void {
+    if (!this._isPlaying) return;
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    const n = this.events.length;
+    if (n === 0) return;
+    // (currentIdx - 1) mod n, then -1 so next()'s ++ lands on the target.
+    this.currentIdx = ((this.currentIdx - 1 + n) % n) - 1;
+    this.next();
+  }
+
   private next(): void {
     this.currentIdx++;
     // Wrap back to the first event so the guided tour loops continuously

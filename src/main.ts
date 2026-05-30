@@ -294,6 +294,25 @@ async function start(): Promise<void> {
     },
   });
 
+  // Undocumented keyboard nav while the guided path is playing: ←/→ jump to
+  // the previous/next event. Registered in capture phase so it pre-empts the
+  // scrubber's own arrow handler (which would otherwise step the date by a
+  // day). Outside tour mode this listener is a no-op.
+  document.addEventListener('keydown', (e) => {
+    if (!tour.isPlaying) return;
+    const tag = (e.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      tour.goPrev();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      tour.goNext();
+    }
+  }, true);
+
   const TOUR_GLYPH_PLAY = '<svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><polygon points="2.5,1.5 2.5,8.5 8.5,5" fill="currentColor"/></svg>';
   const TOUR_GLYPH_STOP = '<svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true"><rect x="2.5" y="2.5" width="5" height="5" fill="currentColor"/></svg>';
 
